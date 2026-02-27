@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { optimizeContent } from "../../services/geminiService";
+import { optimizeContent } from "../../services/insightsService";
 import {
   DEITY_OPTIONS,
   getBenefitOptionsForDeity,
@@ -191,7 +191,7 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
                 disabled={isOptimizing}
                 className="text-[10px] font-bold text-teal-primary bg-teal-primary/5 px-2 py-1 rounded hover:bg-teal-primary/10 disabled:opacity-50"
               >
-                {isOptimizing ? "✨ Optimizing..." : "✨ AI Suggest"}
+                {isOptimizing ? "✨ Optimizing..." : "✨ Suggest"}
               </button>
             </div>
             <textarea

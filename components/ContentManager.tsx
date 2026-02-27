@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { MantraEditModal } from './mantras/MantraEditModal';
 import { ChakraEditModal } from './chakras/ChakraEditModal';
 import { GuidedMeditationEditModal } from './meditations/GuidedMeditationEditModal';
+import { SleepMusicEditModal } from './sleepMusic/SleepMusicEditModal';
 
 const MUSIC_CATEGORIES: Category[] = [
   Category.SLEEP_MUSIC,
@@ -122,6 +123,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
   const [loading, setLoading] = useState(true);
   const [previewItem, setPreviewItem] = useState<ContentItem | null>(null);
   const [editingMantra, setEditingMantra] = useState<MantraEntry | null>(null);
+  const [editingSleepMusicId, setEditingSleepMusicId] = useState<string | null>(null);
   const [editingChakraId, setEditingChakraId] = useState<string | null>(null);
   const [editingMeditationId, setEditingMeditationId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
@@ -237,6 +239,11 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
       return;
     }
 
+    if (category === Category.SLEEP_MUSIC) {
+      setEditingSleepMusicId(item.id);
+      return;
+    }
+
     if (category === Category.CHAKRA) {
       setEditingChakraId(item.id);
       return;
@@ -247,7 +254,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
       return;
     }
 
-    toast.info("Edit is currently available for mantras, chakra, and guided meditation.");
+    toast.info("Edit is currently available for sleep music, mantras, chakra, and guided meditation.");
   };
 
   return (
@@ -351,16 +358,18 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
                       </button>
                       <button
                         onClick={() => handleEdit(item)}
-                        disabled={category !== Category.MANTRAS && category !== Category.CHAKRA && category !== Category.MEDITATION}
+                        disabled={category !== Category.MANTRAS && category !== Category.SLEEP_MUSIC && category !== Category.CHAKRA && category !== Category.MEDITATION}
                         className="p-2 hover:bg-teal-primary/10 rounded-lg text-slate-400 hover:text-teal-primary transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                         title={
                           category === Category.MANTRAS
                             ? "Edit mantra"
+                            : category === Category.SLEEP_MUSIC
+                              ? "Edit sleep music"
                             : category === Category.CHAKRA
                               ? "Edit chakra"
                               : category === Category.MEDITATION
                                 ? "Edit guided meditation"
-                                : "Editing is available for mantras, chakra, and guided meditation"
+                                : "Editing is available for sleep music, mantras, chakra, and guided meditation"
                         }
                       >
                         <span className="text-lg leading-none">✏️</span>
@@ -406,6 +415,17 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
           onClose={() => setEditingChakraId(null)}
           onSuccess={() => {
             setEditingChakraId(null);
+            fetchContent();
+          }}
+        />
+      )}
+
+      {editingSleepMusicId && (
+        <SleepMusicEditModal
+          musicId={editingSleepMusicId}
+          onClose={() => setEditingSleepMusicId(null)}
+          onSuccess={() => {
+            setEditingSleepMusicId(null);
             fetchContent();
           }}
         />

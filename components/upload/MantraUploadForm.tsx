@@ -7,7 +7,7 @@ import {
   DEITY_OPTIONS,
   getBenefitOptionsForDeity,
 } from "../../services/content";
-import { optimizeContent } from "../../services/geminiService";
+import { optimizeContent } from "../../services/insightsService";
 import { toast } from "react-toastify";
 
 interface MantraUploadFormProps {
@@ -98,7 +98,7 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
             disabled={isOptimizing}
             className="text-[10px] font-bold text-teal-primary bg-teal-primary/5 px-2 py-1 rounded hover:bg-teal-primary/10 disabled:opacity-50"
           >
-            {isOptimizing ? "✨ Optimizing..." : "✨ AI Suggest"}
+            {isOptimizing ? "✨ Optimizing..." : "✨ Suggest"}
           </button>
         </div>
         <textarea

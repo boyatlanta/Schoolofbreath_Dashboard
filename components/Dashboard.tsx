@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { generateEngagementSummary } from '../services/geminiService';
+import { generateEngagementSummary } from '../services/insightsService';
 import { fetchDashboardData } from '../services/dashboardService';
 import { Category, ContentItem, StatItem } from '../types';
 
@@ -74,7 +74,7 @@ const ContentCategoryCard: React.FC<{
 
 export const Dashboard: React.FC<{ onOpenUpload: (category?: Category | '') => void }> = ({ onOpenUpload }) => {
   const navigate = useNavigate();
-  const [aiSummary, setAiSummary] = useState("Gathering latest insights...");
+  const [summary, setSummary] = useState("Gathering latest insights...");
   const [stats, setStats] = useState<StatItem[]>([]);
   const [categoryStats, setCategoryStats] = useState<Record<string, { count: number; plays: number; playsDisplay?: string }>>({});
   const [recentActivity, setRecentActivity] = useState<ContentItem[]>([]);
@@ -97,8 +97,8 @@ export const Dashboard: React.FC<{ onOpenUpload: (category?: Category | '') => v
         setIsLive(false);
       }
 
-      const summary = await generateEngagementSummary(data.stats);
-      setAiSummary(summary);
+      const generatedSummary = await generateEngagementSummary(data.stats);
+      setSummary(generatedSummary);
     } catch (error) {
       console.error("Dashboard component error:", error);
     } finally {
@@ -153,8 +153,8 @@ export const Dashboard: React.FC<{ onOpenUpload: (category?: Category | '') => v
       <div className="bg-gradient-to-r from-teal-primary/5 to-lavender/10 border border-teal-light/10 p-4 rounded-xl mb-8 flex items-center gap-4">
         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl shadow-sm">💡</div>
         <div className="flex-1">
-          <p className="text-xs font-bold text-teal-primary uppercase tracking-widest mb-0.5">AI Insights Assistant</p>
-          <p className="text-sm text-slate-600 italic font-medium">"{aiSummary}"</p>
+          <p className="text-xs font-bold text-teal-primary uppercase tracking-widest mb-0.5">Insights Summary</p>
+          <p className="text-sm text-slate-600 italic font-medium">"{summary}"</p>
         </div>
       </div>
 
