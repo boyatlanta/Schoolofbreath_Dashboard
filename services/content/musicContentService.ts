@@ -17,6 +17,13 @@ export interface CategoryType {
   __v?: number;
 }
 
+export interface MusicCategoryRef {
+  _id: string;
+  name?: string;
+  slug?: string;
+  type?: string;
+}
+
 export interface MusicEntry {
   _id: string;
   id?: string;
@@ -25,7 +32,8 @@ export interface MusicEntry {
   favorites?: string[];
   audioFilename: string;
   imageFilename: string;
-  categories: string[];
+  visualUrl?: string;
+  categories: Array<string | MusicCategoryRef>;
   slug?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -39,26 +47,71 @@ export interface CreateMusicPayload {
   name: string;
   description: string;
   categoryId?: string;
-  categories?: string | string[]; // category _id(s) - backend expects categories array
+  categories?: string | string[] | MusicCategoryRef | MusicCategoryRef[]; // category _id(s) - backend expects categories array
   isPremium: boolean | string;
   typeContent?: "music" | "app";
   audioFilename: string;
   imageFilename: string;
+  visualUrl?: string;
+  slug?: string;
+  position?: number;
+}
+
+export interface UpdateMusicPayload {
+  name?: string;
+  description?: string;
+  categoryId?: string;
+  categories?: string | string[] | MusicCategoryRef | MusicCategoryRef[];
+  isPremium?: boolean | string;
+  typeContent?: "music" | "app";
+  audioFilename?: string;
+  imageFilename?: string;
+  visualUrl?: string;
+  slug?: string;
+  position?: number;
 }
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   [Category.SLEEP_MUSIC]: ["sleep", "sleep-music", "Sleep Music"],
   [Category.MEDITATION]: ["meditation", "guided", "Meditation"],
-  [Category.CHAKRA]: ["chakra", "Chakra", "Chakra Music"],
+  [Category.CHAKRA]: ["chakra", "shakra", "Chakra", "Chakra Music"],
 };
 
 const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
   const res = await fetch(url, init);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? "Request failed");
+    const error = new Error(
+      (err as { message?: string }).message ?? "Request failed"
+    ) as Error & { status?: number };
+    error.status = res.status;
+    throw error;
   }
   return res.json();
+};
+
+const normalizeCategoryIds = (
+  categories?: string | string[] | MusicCategoryRef | MusicCategoryRef[]
+): string[] => {
+  if (!categories) return [];
+  const raw = Array.isArray(categories) ? categories : [categories];
+  return raw
+    .map((entry) => {
+      if (typeof entry === "string") return entry;
+      if (entry && typeof entry === "object" && "_id" in entry) {
+        return entry._id;
+      }
+      return "";
+    })
+    .filter(Boolean);
+};
+
+const unwrapMusicEntry = (
+  data: MusicEntry | { data?: MusicEntry } | { music?: MusicEntry }
+): MusicEntry => {
+  if ("data" in data && data.data) return data.data;
+  if ("music" in data && data.music) return data.music;
+  return data as MusicEntry;
 };
 
 export const musicContentService = {
@@ -131,10 +184,10 @@ export const musicContentService = {
     if (!match) return musics;
     return musics.filter((m) => {
       const cats = m.categories || [];
-      return cats.some((c: unknown) =>
-        c === match._id ||
-        (typeof c === "object" && c && "_id" in c && (c as { _id: string })._id === match._id)
-      );
+      return cats.some((c) => {
+        if (typeof c === "string") return c === match._id;
+        return c?._id === match._id;
+      });
     });
   },
 
@@ -152,21 +205,104 @@ export const musicContentService = {
       typeContent: isApp ? "app" : "music",
     };
     // Send category as array of IDs; backend accepts categoryId or categories
-    const catId = categories || categoryId;
-    if (catId) {
-      body.categories = Array.isArray(catId) ? catId : [catId];
+    const categoryIds = normalizeCategoryIds(categories || categoryId);
+    if (categoryIds.length > 0) {
+      body.categories = categoryIds;
     }
-    return fetchJson(`${getContentApiUrl()}/musics/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await fetchJson<MusicEntry | { data: MusicEntry }>(
+      `${getContentApiUrl()}/musics/create`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
+    return unwrapMusicEntry(res);
+  },
+
+  async getById(id: string): Promise<MusicEntry> {
+    try {
+      const res = await fetchJson<MusicEntry | { data: MusicEntry }>(
+        `${getContentApiUrl()}/musics/detail/${id}`
+      );
+      return unwrapMusicEntry(res);
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (status !== 404 && status !== 405) {
+        throw error;
+      }
+      const res = await fetchJson<MusicEntry | { data: MusicEntry }>(
+        `${getContentApiUrl()}/musics/${id}`
+      );
+      return unwrapMusicEntry(res);
+    }
+  },
+
+  async update(id: string, payload: UpdateMusicPayload): Promise<MusicEntry> {
+    const { categoryId, categories, ...rest } = payload;
+    const body: Record<string, unknown> = {
+      ...rest,
+    };
+
+    if (payload.typeContent) {
+      body.typeContent = payload.typeContent === "app" ? "app" : "music";
+    }
+
+    if (payload.isPremium !== undefined) {
+      body.isPremium =
+        typeof payload.isPremium === "string"
+          ? payload.isPremium
+          : payload.isPremium
+            ? "true"
+            : "false";
+    }
+
+    const categoryIds = normalizeCategoryIds(categories || categoryId);
+    if (categoryIds.length > 0) {
+      body.categories = categoryIds;
+      body.categoryId = categoryIds[0];
+    }
+
+    try {
+      const res = await fetchJson<MusicEntry | { data: MusicEntry }>(
+        `${getContentApiUrl()}/musics/edit/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      return unwrapMusicEntry(res);
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (status !== 404 && status !== 405) {
+        throw error;
+      }
+
+      const res = await fetchJson<MusicEntry | { data: MusicEntry }>(
+        `${getContentApiUrl()}/musics/${id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      return unwrapMusicEntry(res);
+    }
   },
 
   async delete(id: string): Promise<void> {
     const res = await fetch(`${getContentApiUrl()}/uploadFiles/delete/${id}`, {
       method: "DELETE",
     });
-    if (!res.ok) throw new Error("Failed to delete");
+    if (res.ok) return;
+    if (res.status !== 404 && res.status !== 405) {
+      throw new Error("Failed to delete");
+    }
+    const fallback = await fetch(`${getContentApiUrl()}/uploadFiles/delete/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!fallback.ok) throw new Error("Failed to delete");
   },
 };

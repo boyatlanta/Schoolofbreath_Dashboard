@@ -13,7 +13,6 @@ import {
   BREATHING_SESSIONS_DEFAULT,
   STATS_DATA,
   INITIAL_CONTENT,
-  NOTIFICATION_HISTORY,
   NEW_RELEASE_CONTENT_TYPES,
   NEW_RELEASE_LINK_OPTIONS_DEFAULT,
   NEW_RELEASE_TARGET_SEGMENTS,
@@ -42,6 +41,37 @@ export type NewReleaseLinkOptionsResponse = {
   options: NewReleaseLinkOption[];
   targetSegments: NewReleaseTargetSegment[];
   contentTypes: NewReleaseContentType[];
+};
+
+const mergeLinkOptions = (apiOptions: unknown): NewReleaseLinkOption[] => {
+  const merged = new Map<string, NewReleaseLinkOption>();
+
+  for (const option of NEW_RELEASE_LINK_OPTIONS_DEFAULT) {
+    merged.set(option.key, option);
+  }
+
+  if (Array.isArray(apiOptions)) {
+    for (const option of apiOptions) {
+      if (!option || typeof option !== 'object') continue;
+      const candidate = option as Partial<NewReleaseLinkOption>;
+      if (typeof candidate.key !== 'string' || !candidate.key.trim()) continue;
+      if (merged.has(candidate.key)) continue;
+      if (typeof candidate.label !== 'string' || typeof candidate.template !== 'string') continue;
+      merged.set(candidate.key, {
+        key: candidate.key,
+        label: candidate.label,
+        description: typeof candidate.description === 'string' ? candidate.description : '',
+        contentType: (candidate.contentType || 'other') as NewReleaseContentType,
+        template: candidate.template,
+        requiredParams: Array.isArray(candidate.requiredParams)
+          ? candidate.requiredParams.filter(param => typeof param === 'string')
+          : [],
+        resolvesTo: typeof candidate.resolvesTo === 'string' ? candidate.resolvesTo : candidate.template,
+      });
+    }
+  }
+
+  return Array.from(merged.values());
 };
 
 const DEFAULT_SCHEDULE_CONFIG: NotificationScheduleConfig = {
@@ -123,10 +153,10 @@ export const apiService = {
       if (!response.ok) throw new Error('Backend responded with error');
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
-      return Array.isArray(data) ? data : NOTIFICATION_HISTORY;
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.warn('API Error /breath/notifications/admin/history:', error);
-      return NOTIFICATION_HISTORY;
+      return [];
     }
   },
 
@@ -241,7 +271,7 @@ export const apiService = {
       }
 
       return {
-        options: Array.isArray(data?.options) && data.options.length ? data.options : NEW_RELEASE_LINK_OPTIONS_DEFAULT,
+        options: mergeLinkOptions(data?.options),
         targetSegments: Array.isArray(data?.targetSegments) && data.targetSegments.length ? data.targetSegments : NEW_RELEASE_TARGET_SEGMENTS,
         contentTypes: Array.isArray(data?.contentTypes) && data.contentTypes.length ? data.contentTypes : NEW_RELEASE_CONTENT_TYPES,
       };
@@ -281,9 +311,15 @@ export const apiService = {
       title: data.title,
       body: data.body,
       deepLink: data.deepLink,
-      contentType: data.contentType,
-      targetSegment: data.targetSegment,
     };
+
+    if (data.contentType) {
+      payload.contentType = data.contentType;
+    }
+
+    if (data.targetSegment) {
+      payload.targetSegment = data.targetSegment;
+    }
 
     if (data.scheduleAt) {
       payload.scheduleAt = data.scheduleAt;
@@ -311,8 +347,6 @@ export const apiService = {
       title: data.title,
       body: data.body,
       deepLink: data.deepLink || '/meditate?tab=guided',
-      contentType: 'other',
-      targetSegment: 'all-users',
     });
   },
 

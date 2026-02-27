@@ -4,6 +4,9 @@ import { musicContentService, mantrasService } from '../services/content';
 import type { MusicEntry } from '../services/content';
 import type { MantraEntry } from '../services/content';
 import { toast } from 'react-toastify';
+import { MantraEditModal } from './mantras/MantraEditModal';
+import { ChakraEditModal } from './chakras/ChakraEditModal';
+import { GuidedMeditationEditModal } from './meditations/GuidedMeditationEditModal';
 
 const MUSIC_CATEGORIES: Category[] = [
   Category.SLEEP_MUSIC,
@@ -12,16 +15,21 @@ const MUSIC_CATEGORIES: Category[] = [
 ];
 
 function musicToContentItem(m: MusicEntry, category: Category): ContentItem {
+  const previewUrl =
+    category === Category.CHAKRA ? m.visualUrl || m.audioFilename : m.audioFilename;
+  const previewType: ContentItem["type"] =
+    category === Category.CHAKRA && !!m.visualUrl ? "MP4" : "MP3";
+
   return {
     id: m._id || m.id || '',
     title: m.name,
     category,
-    type: 'MP3',
+    type: previewType,
     duration: '--',
     status: 'Active',
     date: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '--',
     plays: 0,
-    url: m.audioFilename,
+    url: previewUrl,
   };
 }
 
@@ -110,8 +118,12 @@ type SortKey = keyof ContentItem;
 
 export const ContentManager: React.FC<ContentManagerProps> = ({ category, refreshKey = 0, onOpenUpload }) => {
   const [content, setContent] = useState<ContentItem[]>([]);
+  const [mantrasById, setMantrasById] = useState<Record<string, MantraEntry>>({});
   const [loading, setLoading] = useState(true);
   const [previewItem, setPreviewItem] = useState<ContentItem | null>(null);
+  const [editingMantra, setEditingMantra] = useState<MantraEntry | null>(null);
+  const [editingChakraId, setEditingChakraId] = useState<string | null>(null);
+  const [editingMeditationId, setEditingMeditationId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -121,11 +133,19 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
       if (category === Category.MANTRAS) {
         const data = await mantrasService.getAll();
         setContent(data.map(mantraToContentItem));
+        setMantrasById(
+          data.reduce<Record<string, MantraEntry>>((acc, mantra) => {
+            acc[mantra._id] = mantra;
+            return acc;
+          }, {})
+        );
       } else if (MUSIC_CATEGORIES.includes(category)) {
         const data = await musicContentService.getMusicsByCategory(category);
         setContent(data.map((m) => musicToContentItem(m, category)));
+        setMantrasById({});
       } else {
         setContent([]);
+        setMantrasById({});
       }
     } catch (error) {
       console.error("Content fetch error:", error);
@@ -204,6 +224,30 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
       return;
     }
     setPreviewItem(item);
+  };
+
+  const handleEdit = (item: ContentItem) => {
+    if (category === Category.MANTRAS) {
+      const mantra = mantrasById[item.id];
+      if (!mantra) {
+        toast.error("Unable to find mantra details.");
+        return;
+      }
+      setEditingMantra(mantra);
+      return;
+    }
+
+    if (category === Category.CHAKRA) {
+      setEditingChakraId(item.id);
+      return;
+    }
+
+    if (category === Category.MEDITATION) {
+      setEditingMeditationId(item.id);
+      return;
+    }
+
+    toast.info("Edit is currently available for mantras, chakra, and guided meditation.");
   };
 
   return (
@@ -305,7 +349,20 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
                       >
                         <span className="text-lg leading-none">▶️</span>
                       </button>
-                      <button className="p-2 hover:bg-teal-primary/10 rounded-lg text-slate-400 hover:text-teal-primary transition-colors flex items-center justify-center">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        disabled={category !== Category.MANTRAS && category !== Category.CHAKRA && category !== Category.MEDITATION}
+                        className="p-2 hover:bg-teal-primary/10 rounded-lg text-slate-400 hover:text-teal-primary transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={
+                          category === Category.MANTRAS
+                            ? "Edit mantra"
+                            : category === Category.CHAKRA
+                              ? "Edit chakra"
+                              : category === Category.MEDITATION
+                                ? "Edit guided meditation"
+                                : "Editing is available for mantras, chakra, and guided meditation"
+                        }
+                      >
                         <span className="text-lg leading-none">✏️</span>
                       </button>
                       <button
@@ -329,6 +386,39 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
         <PreviewPlayer 
           item={previewItem} 
           onClose={() => setPreviewItem(null)} 
+        />
+      )}
+
+      {editingMantra && (
+        <MantraEditModal
+          mantra={editingMantra}
+          onClose={() => setEditingMantra(null)}
+          onSuccess={() => {
+            setEditingMantra(null);
+            fetchContent();
+          }}
+        />
+      )}
+
+      {editingChakraId && (
+        <ChakraEditModal
+          chakraId={editingChakraId}
+          onClose={() => setEditingChakraId(null)}
+          onSuccess={() => {
+            setEditingChakraId(null);
+            fetchContent();
+          }}
+        />
+      )}
+
+      {editingMeditationId && (
+        <GuidedMeditationEditModal
+          meditationId={editingMeditationId}
+          onClose={() => setEditingMeditationId(null)}
+          onSuccess={() => {
+            setEditingMeditationId(null);
+            fetchContent();
+          }}
         />
       )}
     </div>

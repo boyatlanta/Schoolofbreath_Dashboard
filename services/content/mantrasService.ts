@@ -1,7 +1,7 @@
 /**
  * Mantras Service – /mantras API (SchoolOfBreathBackendAPIs)
  * GET /mantras → response.mantras
- * POST /mantras, DELETE /mantras/:id
+ * POST /mantras, PUT/PATCH /mantras/:id, DELETE /mantras/:id
  */
 import { getContentApiUrl } from "../../utils/contentApi.config";
 
@@ -25,6 +25,21 @@ export const BENEFIT_OPTIONS = [
   "CONFIDENCE",
   "FORGIVENESS",
 ] as const;
+
+type DeityOption = (typeof DEITY_OPTIONS)[number];
+
+const BENEFITS_BY_DEITY: Record<DeityOption, readonly string[]> = {
+  SHIVA: ["CALM", "HEALING", "FORGIVENESS", "SLEEP"],
+  HANUMAN: ["ENERGY", "PROTECTION", "CONFIDENCE", "DEVOTION"],
+  KRISHNA: ["DEVOTION", "CALM", "HEALING", "FORGIVENESS"],
+  DEVI: ["PROTECTION", "HEALING", "CONFIDENCE", "CALM"],
+  GANESHA: ["PROTECTION", "CONFIDENCE", "ENERGY", "CALM"],
+  GURU: ["CALM", "DEVOTION", "FORGIVENESS", "HEALING"],
+  UNIVERSAL: BENEFIT_OPTIONS,
+};
+
+export const getBenefitOptionsForDeity = (deity: string): readonly string[] =>
+  BENEFITS_BY_DEITY[deity as DeityOption] ?? BENEFIT_OPTIONS;
 
 export interface MantraEntry {
   _id: string;
@@ -58,13 +73,40 @@ export interface CreateMantraPayload {
   isActive?: boolean;
 }
 
+export interface UpdateMantraPayload {
+  title?: string;
+  description?: string;
+  duration?: number; // seconds
+  audioUrl?: string;
+  thumbnailUrl?: string;
+  deity?: string;
+  benefit?: string;
+  difficulty?: string;
+  category?: string;
+  isPremium?: boolean;
+  isActive?: boolean;
+}
+
 const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
   const res = await fetch(url, init);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? "Request failed");
+    const error = new Error(
+      (err as { message?: string }).message ?? "Request failed"
+    ) as Error & { status?: number };
+    error.status = res.status;
+    throw error;
   }
   return res.json();
+};
+
+const unwrapMantraEntry = (
+  data: MantraEntry | { data?: MantraEntry }
+): MantraEntry => {
+  if ("data" in data && data.data) {
+    return data.data;
+  }
+  return data as MantraEntry;
 };
 
 export const mantrasService = {
@@ -76,7 +118,7 @@ export const mantrasService = {
   },
 
   async create(payload: CreateMantraPayload): Promise<MantraEntry> {
-    const res = await fetchJson<{ data: MantraEntry }>(
+    const res = await fetchJson<MantraEntry | { data: MantraEntry }>(
       `${getContentApiUrl()}/mantras`,
       {
         method: "POST",
@@ -87,7 +129,34 @@ export const mantrasService = {
         }),
       }
     );
-    return (res as { data: MantraEntry }).data;
+    return unwrapMantraEntry(res);
+  },
+
+  async update(id: string, payload: UpdateMantraPayload): Promise<MantraEntry> {
+    const body = JSON.stringify(payload);
+    const requestInit = (method: "PUT" | "PATCH"): RequestInit => ({
+      method,
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+
+    try {
+      const res = await fetchJson<MantraEntry | { data: MantraEntry }>(
+        `${getContentApiUrl()}/mantras/${id}`,
+        requestInit("PUT")
+      );
+      return unwrapMantraEntry(res);
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (status !== 404 && status !== 405) {
+        throw error;
+      }
+      const res = await fetchJson<MantraEntry | { data: MantraEntry }>(
+        `${getContentApiUrl()}/mantras/${id}`,
+        requestInit("PATCH")
+      );
+      return unwrapMantraEntry(res);
+    }
   },
 
   async delete(id: string): Promise<void> {

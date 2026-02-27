@@ -1,12 +1,16 @@
 /**
  * Upload modal – routes to feature-specific forms
  * - Mantras: MantraUploadForm (video-content)
- * - Sleep Music, Meditation, Chakra: MusicUploadForm (musics)
+ * - Sleep Music: MusicUploadForm (musics)
+ * - Guided Meditation: GuidedMeditationUploadForm (upload + metadata orchestration)
+ * - Chakra: ChakraUploadForm (musics with visualUrl support)
  */
 import React from "react";
 import { Category } from "../types";
 import { MantraUploadForm } from "./upload/MantraUploadForm";
 import { MusicUploadForm } from "./upload/MusicUploadForm";
+import { GuidedMeditationUploadForm } from "./upload/GuidedMeditationUploadForm";
+import { ChakraUploadForm } from "./chakras/ChakraUploadForm";
 
 interface UploadModalProps {
   initialCategory?: Category | "";
@@ -16,8 +20,6 @@ interface UploadModalProps {
 
 const MUSIC_CATEGORIES = [
   Category.SLEEP_MUSIC,
-  Category.MEDITATION,
-  Category.CHAKRA,
 ] as const;
 
 const getModalTitle = (category: Category | ""): string => {
@@ -82,16 +84,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           )}
           {isMusicCategory && (
             <MusicUploadForm
-              category={
-                initialCategory === Category.SLEEP_MUSIC
-                  ? "sleep-music"
-                  : initialCategory === Category.MEDITATION
-                    ? "meditation"
-                    : "chakra"
-              }
+              category="sleep-music"
               onSuccess={handleSuccess}
               onCancel={onClose}
             />
+          )}
+          {initialCategory === Category.MEDITATION && (
+            <GuidedMeditationUploadForm onSuccess={handleSuccess} onCancel={onClose} />
+          )}
+          {initialCategory === Category.CHAKRA && (
+            <ChakraUploadForm onSuccess={handleSuccess} onCancel={onClose} />
           )}
           {initialCategory === Category.COURSES && (
             <div className="text-slate-500 text-center py-8">

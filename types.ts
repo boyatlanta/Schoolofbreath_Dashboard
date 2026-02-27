@@ -82,7 +82,7 @@ export interface NotificationRecord {
   recipients: number;
   sentDate: string;
   openRate: string;
-  status: 'Delivered' | 'Pending';
+  status: 'Delivered' | 'Pending' | 'Failed';
 }
 
 export interface ScheduledNotificationConfig {
@@ -131,8 +131,8 @@ export interface NewReleasesBlastConfig {
   title: string;
   body: string;
   deepLink: string;
-  contentType: NewReleaseContentType;
-  targetSegment: NewReleaseTargetSegment;
+  contentType?: NewReleaseContentType;
+  targetSegment?: NewReleaseTargetSegment;
   scheduleAt?: string | null;
   data?: Record<string, string>;
 }

@@ -1,8 +1,12 @@
 /**
  * Mantra upload form – /mantras API (audioUrl, deity, benefit, duration)
  */
-import React, { useState } from "react";
-import { mantrasService, DEITY_OPTIONS, BENEFIT_OPTIONS } from "../../services/content";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  mantrasService,
+  DEITY_OPTIONS,
+  getBenefitOptionsForDeity,
+} from "../../services/content";
 import { optimizeContent } from "../../services/geminiService";
 import { toast } from "react-toastify";
 
@@ -25,10 +29,17 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [duration, setDuration] = useState("");
   const [deity, setDeity] = useState(DEITY_OPTIONS[0]);
-  const [benefit, setBenefit] = useState(BENEFIT_OPTIONS[0]);
+  const [benefit, setBenefit] = useState(getBenefitOptionsForDeity(DEITY_OPTIONS[0])[0]);
   const [isPremium, setIsPremium] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const benefitOptions = useMemo(() => getBenefitOptionsForDeity(deity), [deity]);
+
+  useEffect(() => {
+    if (!benefitOptions.includes(benefit)) {
+      setBenefit(benefitOptions[0]);
+    }
+  }, [benefit, benefitOptions]);
 
   const handleOptimize = async () => {
     if (!title) {
@@ -132,7 +143,7 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
           value={benefit}
           onChange={(e) => setBenefit(e.target.value)}
         >
-          {BENEFIT_OPTIONS.map((b) => (
+          {benefitOptions.map((b) => (
             <option key={b} value={b}>{b}</option>
           ))}
         </select>

@@ -15,7 +15,7 @@ interface MusicUploadFormProps {
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   "sleep-music": ["sleep", "sleep-music", "Sleep Music"],
   meditation: ["meditation", "guided", "Meditation"],
-  chakra: ["chakra", "Chakra", "Chakra Music"],
+  chakra: ["chakra", "shakra", "Chakra", "Chakra Music"],
 };
 
 const inputClass =

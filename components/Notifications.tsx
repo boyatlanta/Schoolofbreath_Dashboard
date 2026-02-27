@@ -1,18 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiService } from '../services/apiService';
 import {
-  NewReleaseContentType,
   NewReleaseLinkOption,
-  NewReleaseTargetSegment,
   NewReleasesBlastConfig,
   NotificationRecord,
 } from '../types';
 import {
   BREATHING_SESSIONS_DEFAULT,
   NEW_RELEASES_BLAST_DEFAULT,
-  NEW_RELEASE_CONTENT_TYPES,
   NEW_RELEASE_LINK_OPTIONS_DEFAULT,
-  NEW_RELEASE_TARGET_SEGMENTS,
 } from '../constants';
 
 type ScheduledConfig = {
@@ -64,20 +60,6 @@ const NotificationCard: React.FC<{
   </div>
 );
 
-const labelizeContentType = (value: NewReleaseContentType): string =>
-  value
-    .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
-const labelizeSegment = (value: NewReleaseTargetSegment): string =>
-  value
-    .split('-')
-    .map(part => (part.toLowerCase() === 'd' ? 'days' : part.charAt(0).toUpperCase() + part.slice(1)))
-    .join(' ')
-    .replace('Users 7d', 'Users (7 days)')
-    .replace('Users 30d', 'Users (30 days)');
-
 const fillTemplate = (template: string, params: Record<string, string>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => {
     const value = params[key];
@@ -86,17 +68,23 @@ const fillTemplate = (template: string, params: Record<string, string>): string 
 
 const hasUnresolvedTemplateParams = (value: string): boolean => /\{\w+\}/.test(value);
 
-const toIsoFromDatetimeLocal = (value: string): string | null => {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString();
-};
-
 const extractErrorMessage = (error: unknown): string => {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'string' && error.trim()) return error;
   return 'Request failed';
+};
+
+const getStatusBadgeClass = (status: NotificationRecord['status']): string => {
+  if (status === 'Failed') return 'bg-rose-100 text-rose-700';
+  if (status === 'Pending') return 'bg-amber-100 text-amber-700';
+  return 'bg-emerald-100 text-emerald-700';
+};
+
+const toOpenRateWidth = (openRate: string): string => {
+  const match = /^(\d{1,3})%$/.exec(openRate.trim());
+  if (!match) return '0%';
+  const value = Math.max(0, Math.min(100, Number(match[1])));
+  return `${value}%`;
 };
 
 export const Notifications: React.FC = () => {
@@ -110,13 +98,9 @@ export const Notifications: React.FC = () => {
   const [courseRemindersBg, setCourseRemindersBg] = useState(true);
 
   const [newReleases, setNewReleases] = useState<NewReleasesBlastConfig>(NEW_RELEASES_BLAST_DEFAULT);
-  const [contentTypes, setContentTypes] = useState<NewReleaseContentType[]>(NEW_RELEASE_CONTENT_TYPES);
-  const [targetSegments, setTargetSegments] = useState<NewReleaseTargetSegment[]>(NEW_RELEASE_TARGET_SEGMENTS);
   const [linkOptions, setLinkOptions] = useState<NewReleaseLinkOption[]>(NEW_RELEASE_LINK_OPTIONS_DEFAULT);
   const [selectedLinkOptionKey, setSelectedLinkOptionKey] = useState<string>(NEW_RELEASE_LINK_OPTIONS_DEFAULT[0]?.key || 'custom');
   const [linkParams, setLinkParams] = useState<Record<string, string>>({});
-  const [sendMode, setSendMode] = useState<'now' | 'schedule'>('now');
-  const [scheduleAtLocal, setScheduleAtLocal] = useState('');
   const [sendingRelease, setSendingRelease] = useState(false);
   const [releaseMessage, setReleaseMessage] = useState<string | null>(null);
   const [releaseError, setReleaseError] = useState<string | null>(null);
@@ -137,8 +121,6 @@ export const Notifications: React.FC = () => {
 
         setHistory(historyData);
         setLinkOptions(releaseOptions.options);
-        setContentTypes(releaseOptions.contentTypes);
-        setTargetSegments(releaseOptions.targetSegments);
         setBreathing({
           id: BREATHING_SESSIONS_DEFAULT.id,
           time: scheduleConfig.breathingTime,
@@ -173,7 +155,6 @@ export const Notifications: React.FC = () => {
     setNewReleases(prev => ({
       ...prev,
       deepLink: fillTemplate(selectedLinkOption.template, linkParams),
-      contentType: selectedLinkOption.contentType,
     }));
   }, [selectedLinkOption, selectedLinkOptionKey, linkParams]);
 
@@ -277,16 +258,6 @@ export const Notifications: React.FC = () => {
       return;
     }
 
-    let scheduleAt: string | undefined;
-    if (sendMode === 'schedule') {
-      const iso = toIsoFromDatetimeLocal(scheduleAtLocal);
-      if (!iso) {
-        setReleaseError('Please choose a valid schedule date and time.');
-        return;
-      }
-      scheduleAt = iso;
-    }
-
     setSendingRelease(true);
 
     try {
@@ -295,7 +266,6 @@ export const Notifications: React.FC = () => {
         title,
         body,
         deepLink,
-        scheduleAt,
       });
 
       if (result?.queued) {
@@ -458,7 +428,7 @@ export const Notifications: React.FC = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
         <h3 className="font-serif text-xl font-bold text-deep-teal">New releases blast</h3>
         <p className="text-sm text-slate-500 font-medium mt-0.5 mb-4">
-          Send now or schedule a campaign with typed deep links and audience segments.
+          Send immediate announcements with app route deep links.
         </p>
 
         <div className="space-y-4">
@@ -482,34 +452,6 @@ export const Notifications: React.FC = () => {
               maxLength={180}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-light/20 focus:border-teal-primary outline-none resize-none"
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Content Type</label>
-              <select
-                value={newReleases.contentType}
-                onChange={e => setNewReleases(n => ({ ...n, contentType: e.target.value as NewReleaseContentType }))}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-light/20 focus:border-teal-primary outline-none"
-              >
-                {contentTypes.map(contentType => (
-                  <option key={contentType} value={contentType}>{labelizeContentType(contentType)}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Target Segment</label>
-              <select
-                value={newReleases.targetSegment}
-                onChange={e => setNewReleases(n => ({ ...n, targetSegment: e.target.value as NewReleaseTargetSegment }))}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-light/20 focus:border-teal-primary outline-none"
-              >
-                {targetSegments.map(segment => (
-                  <option key={segment} value={segment}>{labelizeSegment(segment)}</option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div>
@@ -568,40 +510,9 @@ export const Notifications: React.FC = () => {
               }}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-light/20 focus:border-teal-primary outline-none"
             />
-            <p className="text-xs text-slate-500 mt-1.5">Use `/path` or `sob://course|track|mantra|collection/{'{id}'}`</p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Send Time</label>
-            <div className="flex flex-wrap gap-4 mb-3">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="radio"
-                  name="sendMode"
-                  checked={sendMode === 'now'}
-                  onChange={() => setSendMode('now')}
-                />
-                Send now
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="radio"
-                  name="sendMode"
-                  checked={sendMode === 'schedule'}
-                  onChange={() => setSendMode('schedule')}
-                />
-                Schedule for later
-              </label>
-            </div>
-
-            {sendMode === 'schedule' && (
-              <input
-                type="datetime-local"
-                value={scheduleAtLocal}
-                onChange={e => setScheduleAtLocal(e.target.value)}
-                className="w-full max-w-md px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-light/20 focus:border-teal-primary outline-none"
-              />
-            )}
+            <p className="text-xs text-slate-500 mt-1.5">
+              Use app routes like `/meditate?tab=guided`, `/sleep-music`, `/course/{'{courseId}'}`, `/breathe?pattern={'{patternId}'}`.
+            </p>
           </div>
         </div>
 
@@ -611,7 +522,7 @@ export const Notifications: React.FC = () => {
             disabled={sendingRelease}
             className="px-6 py-2.5 bg-sand/80 border border-slate-200 text-slate-800 font-bold rounded-xl hover:bg-sand transition-all text-sm disabled:opacity-60"
           >
-            {sendingRelease ? 'Sending...' : (sendMode === 'schedule' ? 'Schedule release' : 'Send release')}
+            {sendingRelease ? 'Sending...' : 'Send release'}
           </button>
 
           {releaseMessage && (
@@ -655,13 +566,13 @@ export const Notifications: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-slate-100 rounded-full w-20 overflow-hidden">
-                        <div className="h-full bg-emerald-400" style={{ width: n.openRate }} />
+                        <div className="h-full bg-emerald-400" style={{ width: toOpenRateWidth(n.openRate) }} />
                       </div>
                       <span className="text-xs font-bold text-emerald-600">{n.openRate}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
+                    <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${getStatusBadgeClass(n.status)}`}>
                       {n.status}
                     </span>
                   </td>
