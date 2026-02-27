@@ -15,6 +15,37 @@ import { formatDurationLabel } from '../utils/audioDuration';
 
 const NOTIFICATIONS_LABEL = 'notifications';
 
+const parseNumberValue = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const parseBooleanValue = (value: unknown): boolean | null => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  return null;
+};
+
+const formatDateValue = (value: unknown): string => {
+  if (!value) return "--";
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? "--" : date.toLocaleDateString();
+};
+
 export interface CategoryStats {
   count: number;
   plays: number;
@@ -44,17 +75,25 @@ function musicToContentItem(m: MusicEntry, category: Category): ContentItem {
 }
 
 function mantraToContentItem(v: MantraEntry): ContentItem {
-  const durationStr = v.duration ? `${Math.floor(v.duration / 60)}:${String(v.duration % 60).padStart(2, '0')}` : '--';
+  const raw = v as unknown as Record<string, unknown>;
+  const durationSeconds = parseNumberValue(raw.duration);
+  const plays =
+    parseNumberValue(raw.views) ??
+    parseNumberValue(raw.plays) ??
+    parseNumberValue(raw.playCount) ??
+    0;
+  const isActive = parseBooleanValue(raw.isActive);
+
   return {
-    id: v._id,
-    title: v.title,
+    id: String(raw._id || raw.id || ''),
+    title: typeof raw.title === "string" && raw.title.trim() ? raw.title : 'Untitled Mantra',
     category: Category.MANTRAS,
     type: 'MP3',
-    duration: durationStr,
-    status: v.isActive !== false ? 'Active' : 'Draft',
-    date: v.createdAt ? new Date(v.createdAt).toLocaleDateString() : '--',
-    plays: v.views ?? 0,
-    url: v.audioUrl,
+    duration: durationSeconds && durationSeconds > 0 ? formatDurationLabel(durationSeconds) : '--',
+    status: isActive === false ? 'Draft' : 'Active',
+    date: formatDateValue(raw.createdAt || raw.updatedAt),
+    plays: Math.max(0, Math.trunc(plays)),
+    url: typeof raw.audioUrl === "string" ? raw.audioUrl : undefined,
   };
 }
 

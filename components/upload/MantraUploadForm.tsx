@@ -7,7 +7,7 @@ import {
   DEITY_OPTIONS,
   getBenefitOptionsForDeity,
 } from "../../services/content";
-import { optimizeContent } from "../../services/insightsService";
+import { suggestMantraContent } from "../../services/insightsService";
 import { toast } from "react-toastify";
 
 interface MantraUploadFormProps {
@@ -31,7 +31,8 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
   const [deity, setDeity] = useState(DEITY_OPTIONS[0]);
   const [benefit, setBenefit] = useState(getBenefitOptionsForDeity(DEITY_OPTIONS[0])[0]);
   const [isPremium, setIsPremium] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isSuggestingTitle, setIsSuggestingTitle] = useState(false);
+  const [isSuggestingDescription, setIsSuggestingDescription] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const benefitOptions = useMemo(() => getBenefitOptionsForDeity(deity), [deity]);
 
@@ -41,15 +42,48 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
     }
   }, [benefit, benefitOptions]);
 
-  const handleOptimize = async () => {
-    if (!title) {
-      toast.error("Please provide a title first.");
-      return;
+  const handleSuggestTitle = async () => {
+    setIsSuggestingTitle(true);
+    try {
+      const result = await suggestMantraContent({
+        title,
+        deity,
+        benefit,
+        mode: "title",
+      });
+      if (result?.title) {
+        setTitle(result.title);
+      }
+      if (!description && result?.description) {
+        setDescription(result.description);
+      }
+    } catch {
+      toast.error("Unable to generate title suggestion right now.");
+    } finally {
+      setIsSuggestingTitle(false);
     }
-    setIsOptimizing(true);
-    const result = await optimizeContent(title, "mantras", []);
-    if (result) setDescription(result.description);
-    setIsOptimizing(false);
+  };
+
+  const handleSuggestDescription = async () => {
+    setIsSuggestingDescription(true);
+    try {
+      const result = await suggestMantraContent({
+        title,
+        deity,
+        benefit,
+        mode: "description",
+      });
+      if (result?.description) {
+        setDescription(result.description);
+      }
+      if (!title && result?.title) {
+        setTitle(result.title);
+      }
+    } catch {
+      toast.error("Unable to generate description suggestion right now.");
+    } finally {
+      setIsSuggestingDescription(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,17 +122,37 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PremiumToggle value={isPremium} onChange={setIsPremium} labelClass={labelClass} />
-      <InputField label="Title" value={title} onChange={setTitle} placeholder="Ex: Om Namah Shivaya" required />
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className={labelClass}>Title</label>
+          <button
+            type="button"
+            onClick={handleSuggestTitle}
+            disabled={isSuggestingTitle}
+            className="text-[10px] font-bold text-teal-primary bg-teal-primary/5 px-2 py-1 rounded hover:bg-teal-primary/10 disabled:opacity-50"
+          >
+            {isSuggestingTitle ? "✨ Generating..." : "✨ Suggest Title"}
+          </button>
+        </div>
+        <input
+          type="text"
+          required
+          className={inputClass}
+          placeholder="Ex: Om Namah Shivaya"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </div>
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className={labelClass}>Description</label>
           <button
             type="button"
-            onClick={handleOptimize}
-            disabled={isOptimizing}
+            onClick={handleSuggestDescription}
+            disabled={isSuggestingDescription}
             className="text-[10px] font-bold text-teal-primary bg-teal-primary/5 px-2 py-1 rounded hover:bg-teal-primary/10 disabled:opacity-50"
           >
-            {isOptimizing ? "✨ Optimizing..." : "✨ Suggest"}
+            {isSuggestingDescription ? "✨ Generating..." : "✨ Suggest Description"}
           </button>
         </div>
         <textarea
