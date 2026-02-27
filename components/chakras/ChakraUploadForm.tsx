@@ -87,8 +87,8 @@ export const ChakraUploadForm: React.FC<ChakraUploadFormProps> = ({
       toast.error("No chakra category found. Create it in backend first.");
       return;
     }
-    if (!form.audioUrl.trim() || !form.imageUrl.trim()) {
-      toast.error("Audio URL and Image URL are required.");
+    if (!form.audioUrl.trim() || !form.visualUrl.trim()) {
+      toast.error("Audio URL and Visual URL are required.");
       return;
     }
 
@@ -101,8 +101,8 @@ export const ChakraUploadForm: React.FC<ChakraUploadFormProps> = ({
         isPremium: form.isPremium ? "true" : "false",
         typeContent: "app",
         audioFilename: form.audioUrl.trim(),
-        imageFilename: form.imageUrl.trim(),
-        visualUrl: form.visualUrl.trim() || undefined,
+        imageFilename: form.imageUrl.trim() || undefined,
+        visualUrl: form.visualUrl.trim(),
       });
       toast.success("Chakra uploaded successfully");
       onSuccess();
@@ -138,30 +138,12 @@ export const ChakraUploadForm: React.FC<ChakraUploadFormProps> = ({
         required
       />
 
-      {categories.length > 0 && (
-        <div>
-          <label className={`block mb-2 ${labelClass}`}>Category</label>
-          <select
-            value={effectiveCategoryId}
-            onChange={(e) => setField("categoryId", e.target.value)}
-            className={inputClass}
-          >
-            {categories.map((category) => (
-              <option key={category._id} value={category._id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       <InputField
-        label="Image URL"
+        label="Image URL (optional)"
         value={form.imageUrl}
         onChange={(value) => setField("imageUrl", value)}
         placeholder="https://storage.googleapis.com/.../crown.png"
         type="url"
-        required
       />
 
       <InputField
@@ -174,11 +156,12 @@ export const ChakraUploadForm: React.FC<ChakraUploadFormProps> = ({
       />
 
       <InputField
-        label="Visual URL (optional)"
+        label="Visual URL"
         value={form.visualUrl}
         onChange={(value) => setField("visualUrl", value)}
         placeholder="https://storage.googleapis.com/.../crown.mp4"
         type="url"
+        required
       />
 
       <FormActions
