@@ -10,6 +10,7 @@ interface GuidedMeditationUploadInput {
   isPremium: boolean;
   audioFilename: string;
   imageFilename?: string;
+  duration?: number;
 }
 
 interface GuidedMeditationUpdateInput {
@@ -20,7 +21,15 @@ interface GuidedMeditationUpdateInput {
   isPremium: boolean;
   audioFilename: string;
   imageFilename?: string;
+  duration?: number;
 }
+
+const normalizeDuration = (duration?: number): number | undefined => {
+  if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) {
+    return undefined;
+  }
+  return Math.round(duration);
+};
 
 export const guidedMeditationsService = {
   async create(input: GuidedMeditationUploadInput): Promise<MusicEntry> {
@@ -32,6 +41,7 @@ export const guidedMeditationsService = {
       typeContent: "app",
       audioFilename: input.audioFilename.trim(),
       imageFilename: input.imageFilename?.trim() || "",
+      duration: normalizeDuration(input.duration),
       slug: input.slug.trim(),
       position: input.position,
     });
@@ -50,6 +60,7 @@ export const guidedMeditationsService = {
       typeContent: "app",
       audioFilename: input.audioFilename.trim(),
       imageFilename: input.imageFilename?.trim() || "",
+      duration: normalizeDuration(input.duration),
       slug: input.slug.trim(),
       position: input.position,
     });

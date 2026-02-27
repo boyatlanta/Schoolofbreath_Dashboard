@@ -11,6 +11,7 @@ import type { MusicEntry } from './content';
 import type { MantraEntry } from './content';
 import { fetchScratchCourses } from './coursesService';
 import { apiService } from './apiService';
+import { formatDurationLabel } from '../utils/audioDuration';
 
 const NOTIFICATIONS_LABEL = 'notifications';
 
@@ -34,7 +35,7 @@ function musicToContentItem(m: MusicEntry, category: Category): ContentItem {
     title: m.name,
     category,
     type: 'MP3',
-    duration: '--',
+    duration: formatDurationLabel(m.duration),
     status: 'Active',
     date: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '--',
     plays,

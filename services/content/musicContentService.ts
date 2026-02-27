@@ -29,6 +29,7 @@ export interface MusicEntry {
   id?: string;
   name: string;
   position?: number;
+  duration?: number;
   favorites?: string[];
   audioFilename: string;
   imageFilename: string;
@@ -52,6 +53,7 @@ export interface CreateMusicPayload {
   typeContent?: "music" | "app";
   audioFilename: string;
   imageFilename: string;
+  duration?: number;
   visualUrl?: string;
   slug?: string;
   position?: number;
@@ -66,6 +68,7 @@ export interface UpdateMusicPayload {
   typeContent?: "music" | "app";
   audioFilename?: string;
   imageFilename?: string;
+  duration?: number;
   visualUrl?: string;
   slug?: string;
   position?: number;

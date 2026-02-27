@@ -4,6 +4,10 @@ import {
   guidedMeditationsService,
   GUIDED_MEDITATION_CATEGORY_ID,
 } from "../../services/content";
+import {
+  formatDurationLabel,
+  getAudioDurationInSeconds,
+} from "../../utils/audioDuration";
 
 interface GuidedMeditationUploadFormProps {
   onSuccess: () => void;
@@ -49,6 +53,9 @@ export const GuidedMeditationUploadForm: React.FC<
   GuidedMeditationUploadFormProps
 > = ({ onSuccess, onCancel }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDetectingDuration, setIsDetectingDuration] = useState(false);
+  const [detectedDuration, setDetectedDuration] = useState<number | null>(null);
+  const [detectedDurationUrl, setDetectedDurationUrl] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [form, setForm] = useState<FormState>({
     name: "",
@@ -74,6 +81,24 @@ export const GuidedMeditationUploadForm: React.FC<
   const handleSlugChange = (value: string) => {
     setSlugTouched(true);
     setField("slug", slugify(value));
+  };
+
+  const handleAudioUrlChange = (value: string) => {
+    setField("audioFilename", value);
+    setDetectedDuration(null);
+    setDetectedDurationUrl("");
+  };
+
+  const resolveDuration = async (audioUrl: string): Promise<number> => {
+    setIsDetectingDuration(true);
+    try {
+      const parsedDuration = await getAudioDurationInSeconds(audioUrl);
+      setDetectedDuration(parsedDuration);
+      setDetectedDurationUrl(audioUrl);
+      return parsedDuration;
+    } finally {
+      setIsDetectingDuration(false);
+    }
   };
 
   const validateForm = (): boolean => {
@@ -117,14 +142,22 @@ export const GuidedMeditationUploadForm: React.FC<
 
     setIsSubmitting(true);
     try {
+      const audioUrl = form.audioFilename.trim();
+      const shouldRefreshDuration =
+        detectedDuration === null || detectedDurationUrl !== audioUrl;
+      const duration = shouldRefreshDuration
+        ? await resolveDuration(audioUrl)
+        : detectedDuration;
+
       await guidedMeditationsService.create({
         name: form.name.trim(),
         description: form.description.trim(),
         slug: form.slug.trim(),
         position: Number.parseInt(form.position, 10),
         isPremium: form.isPremium,
-        audioFilename: form.audioFilename.trim(),
+        audioFilename: audioUrl,
         imageFilename: form.imageFilename.trim(),
+        duration: duration ?? undefined,
       });
 
       toast.success("Guided meditation created successfully");
@@ -205,15 +238,23 @@ export const GuidedMeditationUploadForm: React.FC<
       <InputField
         label="Audio URL"
         value={form.audioFilename}
-        onChange={(value) => setField("audioFilename", value)}
+        onChange={handleAudioUrlChange}
         placeholder="https://storage.googleapis.com/.../Meditation-to-Manifest-Abundance.mp3"
         type="url"
         required
       />
+      <p className="text-[11px] text-slate-500 -mt-3">
+        {isDetectingDuration
+          ? "Calculating duration from the audio URL..."
+          : detectedDuration !== null &&
+              detectedDurationUrl === form.audioFilename.trim()
+            ? `Detected duration: ${formatDurationLabel(detectedDuration)} (${detectedDuration}s)`
+            : "Duration is calculated automatically from the audio URL when saved."}
+      </p>
 
       <FormActions
         onCancel={onCancel}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || isDetectingDuration}
         submitLabel="Create Guided Meditation"
       />
     </form>

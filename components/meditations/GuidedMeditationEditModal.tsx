@@ -4,6 +4,10 @@ import {
   guidedMeditationsService,
   GUIDED_MEDITATION_CATEGORY_ID,
 } from "../../services/content";
+import {
+  formatDurationLabel,
+  getAudioDurationInSeconds,
+} from "../../utils/audioDuration";
 
 interface GuidedMeditationEditModalProps {
   meditationId: string;
@@ -19,6 +23,7 @@ interface GuidedMeditationFormState {
   isPremium: boolean;
   audioFilename: string;
   imageFilename: string;
+  duration: number | null;
 }
 
 const GUIDED_MEDITATION_CATEGORY_LABEL = "guided meditation";
@@ -56,6 +61,12 @@ const mapEntryToForm = (
   isPremium: Boolean(entry.isPremium),
   audioFilename: entry.audioFilename ?? "",
   imageFilename: entry.imageFilename ?? "",
+  duration:
+    typeof entry.duration === "number" &&
+    Number.isFinite(entry.duration) &&
+    entry.duration > 0
+      ? Math.round(entry.duration)
+      : null,
 });
 
 export const GuidedMeditationEditModal: React.FC<
@@ -63,6 +74,7 @@ export const GuidedMeditationEditModal: React.FC<
 > = ({ meditationId, onClose, onSuccess }) => {
   const [form, setForm] = useState<GuidedMeditationFormState | null>(null);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [initialAudioUrl, setInitialAudioUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,6 +84,7 @@ export const GuidedMeditationEditModal: React.FC<
       try {
         const entry = await guidedMeditationsService.getById(meditationId);
         setForm(mapEntryToForm(entry));
+        setInitialAudioUrl(entry.audioFilename ?? "");
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -104,6 +117,13 @@ export const GuidedMeditationEditModal: React.FC<
   const handleSlugChange = (value: string) => {
     setSlugTouched(true);
     setField("slug", slugify(value));
+  };
+
+  const handleAudioUrlChange = (value: string) => {
+    setField("audioFilename", value);
+    if (value.trim() !== initialAudioUrl.trim()) {
+      setField("duration", null);
+    }
   };
 
   const validateForm = (): form is GuidedMeditationFormState => {
@@ -149,15 +169,25 @@ export const GuidedMeditationEditModal: React.FC<
 
     setIsSaving(true);
     try {
+      const audioUrl = form.audioFilename.trim();
+      const shouldRefreshDuration =
+        audioUrl !== initialAudioUrl.trim() || form.duration === null;
+      const duration = shouldRefreshDuration
+        ? await getAudioDurationInSeconds(audioUrl)
+        : form.duration;
+
       await guidedMeditationsService.update(meditationId, {
         name: form.name.trim(),
         description: form.description.trim(),
         slug: form.slug.trim(),
         position: Number.parseInt(form.position, 10),
         isPremium: form.isPremium,
-        audioFilename: form.audioFilename.trim(),
+        audioFilename: audioUrl,
         imageFilename: form.imageFilename.trim(),
+        duration: duration ?? undefined,
       });
+      setForm((prev) => (prev ? { ...prev, duration: duration ?? null } : prev));
+      setInitialAudioUrl(audioUrl);
       toast.success("Guided meditation updated successfully");
       onSuccess();
     } catch (error) {
@@ -264,11 +294,16 @@ export const GuidedMeditationEditModal: React.FC<
             <InputField
               label="Audio URL"
               value={form.audioFilename}
-              onChange={(value) => setField("audioFilename", value)}
+              onChange={handleAudioUrlChange}
               placeholder="https://storage.googleapis.com/.../Meditation-to-Manifest-Abundance.mp3"
               type="url"
               required
             />
+            <p className="text-[11px] text-slate-500 -mt-3">
+              {form.duration !== null
+                ? `Detected duration: ${formatDurationLabel(form.duration)} (${form.duration}s)`
+                : "Duration will be calculated automatically from the audio URL when saving."}
+            </p>
 
             <div className="flex gap-4 pt-4">
               <button

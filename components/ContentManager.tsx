@@ -8,6 +8,7 @@ import { MantraEditModal } from './mantras/MantraEditModal';
 import { ChakraEditModal } from './chakras/ChakraEditModal';
 import { GuidedMeditationEditModal } from './meditations/GuidedMeditationEditModal';
 import { SleepMusicEditModal } from './sleepMusic/SleepMusicEditModal';
+import { formatDurationLabel } from '../utils/audioDuration';
 
 const MUSIC_CATEGORIES: Category[] = [
   Category.SLEEP_MUSIC,
@@ -26,7 +27,7 @@ function musicToContentItem(m: MusicEntry, category: Category): ContentItem {
     title: m.name,
     category,
     type: previewType,
-    duration: '--',
+    duration: formatDurationLabel(m.duration),
     status: 'Active',
     date: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '--',
     plays: 0,
