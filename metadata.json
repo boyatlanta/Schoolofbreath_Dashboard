@@ -1,0 +1,8 @@
+{
+  "name": "The School of Breath - Admin Dashboard",
+  "description": "A comprehensive, serene administrative interface for managing breathwork content, courses, and user engagement with AI-powered content optimization.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

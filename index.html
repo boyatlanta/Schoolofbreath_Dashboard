@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The School of Breath - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'deep-teal': '#1a4d5e',
+              'teal-primary': '#2a5f73',
+              'teal-light': '#3a7a92',
+              'sage': '#8ba888',
+              'cream': '#f5f1e8',
+              'sand': '#e8dcc8',
+              'gold': '#c9a868',
+              'gold-light': '#d4b67a',
+              'peach': '#f5cba7',
+              'mint': '#b4d9cc',
+              'lavender': '#d4c5e2',
+            },
+            fontFamily: {
+              serif: ['"Cormorant Garamond"', 'serif'],
+              sans: ['Karla', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #f5f1e8;
+        background-image: 
+          radial-gradient(circle at 20% 80%, rgba(180, 217, 204, 0.2) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(212, 197, 226, 0.15) 0%, transparent 50%);
+        background-attachment: fixed;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #2a5f73;
+        border-radius: 10px;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="font-sans text-slate-800 antialiased">
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
