@@ -284,7 +284,7 @@ export const GuidedMeditationEditModal: React.FC<
             </div>
 
             <InputField
-              label="Cover Image URL"
+              label="Cover Image URL (optional)"
               value={form.imageFilename}
               onChange={(value) => setField("imageFilename", value)}
               placeholder="https://storage.googleapis.com/.../Images/Abundance3.png"

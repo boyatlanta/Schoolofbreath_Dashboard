@@ -31,6 +31,11 @@ const normalizeDuration = (duration?: number): number | undefined => {
   return Math.round(duration);
 };
 
+const normalizeImageFilename = (imageFilename?: string): string | undefined => {
+  const trimmed = imageFilename?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
 export const guidedMeditationsService = {
   async create(input: GuidedMeditationUploadInput): Promise<MusicEntry> {
     return musicContentService.create({
@@ -40,7 +45,7 @@ export const guidedMeditationsService = {
       isPremium: input.isPremium ? "true" : "false",
       typeContent: "app",
       audioFilename: input.audioFilename.trim(),
-      imageFilename: input.imageFilename?.trim() || "",
+      imageFilename: normalizeImageFilename(input.imageFilename),
       duration: normalizeDuration(input.duration),
       slug: input.slug.trim(),
       position: input.position,
@@ -59,7 +64,7 @@ export const guidedMeditationsService = {
       isPremium: input.isPremium ? "true" : "false",
       typeContent: "app",
       audioFilename: input.audioFilename.trim(),
-      imageFilename: input.imageFilename?.trim() || "",
+      imageFilename: normalizeImageFilename(input.imageFilename),
       duration: normalizeDuration(input.duration),
       slug: input.slug.trim(),
       position: input.position,

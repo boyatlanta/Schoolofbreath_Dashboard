@@ -52,7 +52,7 @@ export interface CreateMusicPayload {
   isPremium: boolean | string;
   typeContent?: "music" | "app";
   audioFilename: string;
-  imageFilename: string;
+  imageFilename?: string;
   duration?: number;
   visualUrl?: string;
   slug?: string;
