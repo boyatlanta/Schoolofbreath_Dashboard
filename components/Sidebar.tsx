@@ -69,6 +69,7 @@ export const Sidebar: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             <NavItem to="/sleep-music" icon="🌙" label="Sleep Music" active={location.pathname === '/sleep-music'} />
             <NavItem to="/meditation" icon="🧘" label="Meditation" active={location.pathname === '/meditation'} />
             <NavItem to="/mantras" icon="🕉️" label="Mantras" active={location.pathname === '/mantras'} />
+            <NavItem to="/playlists" icon="🎵" label="Playlists" active={location.pathname === '/playlists'} />
             <NavItem to="/chakra" icon="✨" label="Chakra Music" active={location.pathname === '/chakra'} />
             <NavItem to="/courses" icon="📖" label="My Courses" active={location.pathname === '/courses'} />
           </div>

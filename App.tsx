@@ -6,6 +6,7 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { ContentManager } from './components/ContentManager';
 import { CoursesPage } from './components/courses/CoursesPage';
+import { PlaylistsPage } from './components/mantras/PlaylistsPage';
 import { Notifications } from './components/Notifications';
 import { UploadModal } from './components/UploadModal';
 import { Login } from './components/Login';
@@ -64,6 +65,7 @@ const MainLayout: React.FC = () => {
           <Route path="/meditation" element={<ContentManager category={Category.MEDITATION} refreshKey={contentRefreshKey} onOpenUpload={() => handleOpenUpload(Category.MEDITATION)} />} />
           <Route path="/mantras" element={<ContentManager category={Category.MANTRAS} refreshKey={contentRefreshKey} onOpenUpload={() => handleOpenUpload(Category.MANTRAS)} />} />
           <Route path="/chakra" element={<ContentManager category={Category.CHAKRA} refreshKey={contentRefreshKey} onOpenUpload={() => handleOpenUpload(Category.CHAKRA)} />} />
+          <Route path="/playlists" element={<PlaylistsPage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="*" element={<Navigate to="/" replace />} />

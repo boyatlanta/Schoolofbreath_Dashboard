@@ -32,3 +32,10 @@ export type {
   CreateMantraPayload,
   UpdateMantraPayload,
 } from "./mantrasService";
+
+export { playlistsService } from "./playlistsService";
+export type {
+  PlaylistEntry,
+  CreatePlaylistPayload,
+  UpdatePlaylistPayload,
+} from "./playlistsService";

@@ -8,6 +8,8 @@ import {
   getBenefitOptionsForDeity,
 } from "../../services/content";
 import { suggestMantraContent } from "../../services/insightsService";
+import { playlistsService } from "../../services/content/playlistsService";
+import type { PlaylistEntry } from "../../services/content/playlistsService";
 import { toast } from "react-toastify";
 
 interface MantraUploadFormProps {
@@ -34,6 +36,9 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
   const [isSuggestingTitle, setIsSuggestingTitle] = useState(false);
   const [isSuggestingDescription, setIsSuggestingDescription] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [playlists, setPlaylists] = useState<PlaylistEntry[]>([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<string>>(new Set());
   const benefitOptions = useMemo(() => getBenefitOptionsForDeity(deity), [deity]);
 
   useEffect(() => {
@@ -41,6 +46,22 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
       setBenefit(benefitOptions[0]);
     }
   }, [benefit, benefitOptions]);
+
+  useEffect(() => {
+    setLoadingPlaylists(true);
+    playlistsService.getAll(true)
+      .then(setPlaylists)
+      .catch(() => {})
+      .finally(() => setLoadingPlaylists(false));
+  }, []);
+
+  const togglePlaylist = (id: string) => {
+    setSelectedPlaylistIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleSuggestTitle = async () => {
     setIsSuggestingTitle(true);
@@ -99,7 +120,7 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
     }
     setIsUploading(true);
     try {
-      await mantrasService.create({
+      const newMantra = await mantrasService.create({
         title,
         description: description || " ",
         audioUrl,
@@ -110,6 +131,14 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
         isPremium,
         isActive: true,
       });
+      // Add the new mantra to any selected playlists
+      if (selectedPlaylistIds.size > 0) {
+        await Promise.allSettled(
+          playlists
+            .filter((pl) => selectedPlaylistIds.has(pl._id) && !pl.trackIds.includes(newMantra._id))
+            .map((pl) => playlistsService.update(pl._id, { trackIds: [...pl.trackIds, newMantra._id] }))
+        );
+      }
       toast.success("Mantra uploaded successfully");
       onSuccess();
     } catch (err) {
@@ -202,6 +231,30 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
           ))}
         </select>
       </div>
+      {/* Playlist assignment */}
+      <div>
+        <label className={`block mb-2 ${labelClass}`}>Add to Playlists (optional)</label>
+        {loadingPlaylists ? (
+          <p className="text-xs text-slate-400">Loading playlists…</p>
+        ) : playlists.length === 0 ? (
+          <p className="text-xs text-slate-400">No playlists available yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+            {playlists.map((pl) => (
+              <label key={pl._id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={selectedPlaylistIds.has(pl._id)}
+                  onChange={() => togglePlaylist(pl._id)}
+                  className="accent-teal-primary"
+                />
+                <span className="truncate">{pl.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
       <FormActions onCancel={onCancel} submitLabel="Upload Mantra" isSubmitting={isUploading} />
     </form>
   );

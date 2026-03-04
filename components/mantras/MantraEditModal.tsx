@@ -7,6 +7,8 @@ import {
   mantrasService,
 } from "../../services/content";
 import type { MantraEntry, UpdateMantraPayload } from "../../services/content";
+import { playlistsService } from "../../services/content/playlistsService";
+import type { PlaylistEntry } from "../../services/content/playlistsService";
 
 interface MantraEditModalProps {
   mantra: MantraEntry;
@@ -76,6 +78,9 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
   const [isSuggestingTitle, setIsSuggestingTitle] = useState(false);
   const [isSuggestingDescription, setIsSuggestingDescription] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [playlists, setPlaylists] = useState<PlaylistEntry[]>([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<string>>(new Set());
   const benefitOptions = useMemo(
     () => getBenefitOptionsForDeity(form.deity),
     [form.deity]
@@ -84,6 +89,26 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
   useEffect(() => {
     setForm(mapMantraToFormState(mantra));
   }, [mantra]);
+
+  // Load playlists and pre-check those that already contain this mantra
+  useEffect(() => {
+    setLoadingPlaylists(true);
+    playlistsService.getAll(true)
+      .then((all) => {
+        setPlaylists(all);
+        setSelectedPlaylistIds(new Set(all.filter((pl) => pl.trackIds.includes(mantra._id)).map((pl) => pl._id)));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingPlaylists(false));
+  }, [mantra._id]);
+
+  const togglePlaylist = (id: string) => {
+    setSelectedPlaylistIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!benefitOptions.includes(form.benefit)) {
@@ -164,6 +189,15 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
         mantra._id,
         mapFormStateToPayload(form, durationNum)
       );
+      // Sync playlist membership: add to newly checked, remove from unchecked
+      const toAdd = playlists.filter((pl) => selectedPlaylistIds.has(pl._id) && !pl.trackIds.includes(mantra._id));
+      const toRemove = playlists.filter((pl) => !selectedPlaylistIds.has(pl._id) && pl.trackIds.includes(mantra._id));
+      if (toAdd.length > 0 || toRemove.length > 0) {
+        await Promise.allSettled([
+          ...toAdd.map((pl) => playlistsService.update(pl._id, { trackIds: [...pl.trackIds, mantra._id] })),
+          ...toRemove.map((pl) => playlistsService.update(pl._id, { trackIds: pl.trackIds.filter((id) => id !== mantra._id) })),
+        ]);
+      }
       toast.success("Mantra updated successfully");
       onSuccess();
     } catch (error) {
@@ -303,6 +337,30 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
             onChange={(value) => setField("difficulty", value)}
             placeholder="Ex: Beginner"
           />
+
+          {/* Playlist assignment */}
+          <div>
+            <label className={`block mb-2 ${labelClass}`}>Playlists</label>
+            {loadingPlaylists ? (
+              <p className="text-xs text-slate-400">Loading playlists…</p>
+            ) : playlists.length === 0 ? (
+              <p className="text-xs text-slate-400">No playlists available yet.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                {playlists.map((pl) => (
+                  <label key={pl._id} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlaylistIds.has(pl._id)}
+                      onChange={() => togglePlaylist(pl._id)}
+                      className="accent-teal-primary"
+                    />
+                    <span className="truncate">{pl.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-4 pt-4">
             <button

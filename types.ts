@@ -4,7 +4,8 @@ export enum Category {
   MANTRAS = 'mantras',
   CHAKRA = 'chakra',
   COURSES = 'courses',
-  NOTIFICATIONS = 'notifications'
+  NOTIFICATIONS = 'notifications',
+  PLAYLISTS = 'playlists',
 }
 
 /** Mantra benefits - "How do you want to feel?" (select one or more) */
