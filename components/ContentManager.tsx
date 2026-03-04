@@ -9,12 +9,22 @@ import { ChakraEditModal } from './chakras/ChakraEditModal';
 import { GuidedMeditationEditModal } from './meditations/GuidedMeditationEditModal';
 import { SleepMusicEditModal } from './sleepMusic/SleepMusicEditModal';
 import { formatDurationLabel } from '../utils/audioDuration';
+import { getBulkStats } from '../services/analyticsService';
+import type { AnalyticsContentType } from '../services/analyticsService';
 
 const MUSIC_CATEGORIES: Category[] = [
   Category.SLEEP_MUSIC,
   Category.MEDITATION,
   Category.CHAKRA,
 ];
+
+/** Maps dashboard Category to the analytics contentType expected by /analytics/bulk-stats */
+const CATEGORY_TO_ANALYTICS_TYPE: Partial<Record<Category, AnalyticsContentType>> = {
+  [Category.MANTRAS]: 'mantra',
+  [Category.MEDITATION]: 'guided',
+  [Category.SLEEP_MUSIC]: 'sleep',
+  [Category.CHAKRA]: 'chakra',
+};
 
 const parseNumberValue = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -169,12 +179,26 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const enrichWithAnalytics = (items: ContentItem[], analyticsType: AnalyticsContentType) => {
+    getBulkStats(items.map((i) => i.id), analyticsType)
+      .then((stats) => {
+        setContent((prev: ContentItem[]) =>
+          prev.map((item: ContentItem) => {
+            const s = stats[item.id];
+            return s ? { ...item, plays: s.totalPlays } : item;
+          })
+        );
+      })
+      .catch(() => {}); // analytics failures are silent
+  };
+
   const fetchContent = async () => {
     setLoading(true);
     try {
       if (category === Category.MANTRAS) {
         const data = await mantrasService.getAll();
-        setContent(data.map(mantraToContentItem));
+        const items = data.map(mantraToContentItem);
+        setContent(items);
         setMantrasById(
           data.reduce<Record<string, MantraEntry>>((acc, mantra) => {
             const mantraId = String(
@@ -188,10 +212,16 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ category, refres
             return acc;
           }, {})
         );
+        // Enrich plays from analytics (overrides mantra.views with real play count)
+        enrichWithAnalytics(items, 'mantra');
       } else if (MUSIC_CATEGORIES.includes(category)) {
         const data = await musicContentService.getMusicsByCategory(category);
-        setContent(data.map((m) => musicToContentItem(m, category)));
+        const items = data.map((m) => musicToContentItem(m, category));
+        setContent(items);
         setMantrasById({});
+        // Enrich music items with real play counts from analytics
+        const analyticsType = CATEGORY_TO_ANALYTICS_TYPE[category];
+        if (analyticsType) enrichWithAnalytics(items, analyticsType);
       } else {
         setContent([]);
         setMantrasById({});

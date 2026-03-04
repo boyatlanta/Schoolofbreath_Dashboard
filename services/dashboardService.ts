@@ -12,6 +12,7 @@ import type { MantraEntry } from './content';
 import { fetchScratchCourses } from './coursesService';
 import { apiService } from './apiService';
 import { formatDurationLabel } from '../utils/audioDuration';
+import { getCategoryTotalPlays } from './analyticsService';
 
 const NOTIFICATIONS_LABEL = 'notifications';
 
@@ -105,6 +106,10 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     mantras,
     scratchCourses,
     notifications,
+    playsMantra,
+    playsGuided,
+    playsSleep,
+    playsChakra,
   ] = await Promise.all([
     musicContentService.getMusicsByCategory(Category.SLEEP_MUSIC),
     musicContentService.getMusicsByCategory(Category.MEDITATION),
@@ -112,6 +117,11 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     mantrasService.getAll(),
     fetchScratchCourses().catch(() => null),
     apiService.getNotifications().catch(() => []),
+    // Analytics totals for dashboard category cards (fail silently → 0)
+    getCategoryTotalPlays('mantra').catch(() => 0),
+    getCategoryTotalPlays('guided').catch(() => 0),
+    getCategoryTotalPlays('sleep').catch(() => 0),
+    getCategoryTotalPlays('chakra').catch(() => 0),
   ]);
 
   const sleepItems = sleepMusic.map((m) => musicToContentItem(m, Category.SLEEP_MUSIC));
@@ -126,19 +136,20 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const categoryStats: Record<string, CategoryStats> = {
     [Category.SLEEP_MUSIC]: {
       count: sleepMusic.length,
-      plays: sleepItems.reduce((sum, i) => sum + i.plays, 0),
+      // Real play counts from analytics; fall back to 0 if no data yet
+      plays: playsSleep || 0,
     },
     [Category.MEDITATION]: {
       count: guidedMeditation.length,
-      plays: meditationItems.reduce((sum, i) => sum + i.plays, 0),
+      plays: playsGuided || 0,
     },
     [Category.MANTRAS]: {
       count: mantras.length,
-      plays: mantraItems.reduce((sum, i) => sum + i.plays, 0),
+      plays: playsMantra || 0,
     },
     [Category.CHAKRA]: {
       count: chakraMusic.length,
-      plays: chakraItems.reduce((sum, i) => sum + i.plays, 0),
+      plays: playsChakra || 0,
     },
     courses: { count: courseCount, plays: 0 },
     [NOTIFICATIONS_LABEL]: {
