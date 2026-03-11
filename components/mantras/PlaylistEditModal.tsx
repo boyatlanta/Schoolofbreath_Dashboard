@@ -14,6 +14,8 @@ import type {
 import { mantrasService, DEITY_OPTIONS, getBenefitOptionsForDeity } from "../../services/content";
 import type { MantraEntry } from "../../services/content/mantrasService";
 import { suggestMantraContent } from "../../services/insightsService";
+import { formatDurationLabel } from "../../utils/audioDuration";
+import { parseDurationInputToSeconds } from "../../utils/mantraDuration";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -118,6 +120,10 @@ export const PlaylistEditModal: React.FC<Props> = ({ playlist, onClose, onSaved 
   const [creatingMantra, setCreatingMantra] = useState(false);
   const [suggestingTitle, setSuggestingTitle] = useState(false);
   const [suggestingDesc, setSuggestingDesc] = useState(false);
+  const parsedNewMantraDuration = useMemo(
+    () => parseDurationInputToSeconds(newMantra.duration),
+    [newMantra.duration]
+  );
 
   const benefitOptions = useMemo(() => getBenefitOptionsForDeity(newMantra.deity), [newMantra.deity]);
 
@@ -259,8 +265,8 @@ export const PlaylistEditModal: React.FC<Props> = ({ playlist, onClose, onSaved 
     e.preventDefault();
     if (!newMantra.title.trim()) { toast.error("Title is required"); return; }
     if (!newMantra.audioUrl.trim()) { toast.error("Audio URL is required"); return; }
-    const durationNum = parseInt(newMantra.duration, 10);
-    if (isNaN(durationNum) || durationNum <= 0) { toast.error("Enter a valid duration in seconds"); return; }
+    const durationNum = parseDurationInputToSeconds(newMantra.duration);
+    if (!durationNum) { toast.error("Enter a valid duration (mm:ss, hh:mm:ss, or seconds)"); return; }
 
     setCreatingMantra(true);
     try {
@@ -585,17 +591,28 @@ export const PlaylistEditModal: React.FC<Props> = ({ playlist, onClose, onSaved 
 
                   {/* Duration */}
                   <div>
-                    <label className={labelClass}>Duration (seconds) *</label>
+                    <label className={labelClass}>Duration *</label>
                     <input
-                      type="number"
-                      min={1}
+                      type="text"
                       required
                       value={newMantra.duration}
                       onChange={(e) => setNM("duration", e.target.value)}
-                      placeholder="e.g. 300"
+                      placeholder="e.g. 5:30 or 330"
                       className={inputClass}
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">e.g. 300 = 5 min</p>
+                    <p
+                      className={`text-[10px] mt-1 ${
+                        newMantra.duration.trim().length > 0 && !parsedNewMantraDuration
+                          ? "text-rose-500"
+                          : "text-slate-400"
+                      }`}
+                    >
+                      {newMantra.duration.trim().length === 0
+                        ? "Enter mm:ss, hh:mm:ss, or total seconds."
+                        : parsedNewMantraDuration
+                          ? `Will save as ${parsedNewMantraDuration}s (${formatDurationLabel(parsedNewMantraDuration)}).`
+                          : "Invalid format. Examples: 5:30, 1:05:20, or 330."}
+                    </p>
                   </div>
 
                   {/* Deity */}

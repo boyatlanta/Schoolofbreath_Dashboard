@@ -9,6 +9,11 @@ import {
 import type { MantraEntry, UpdateMantraPayload } from "../../services/content";
 import { playlistsService } from "../../services/content/playlistsService";
 import type { PlaylistEntry } from "../../services/content/playlistsService";
+import { formatDurationLabel } from "../../utils/audioDuration";
+import {
+  formatSecondsForDurationInput,
+  parseDurationInputToSeconds,
+} from "../../utils/mantraDuration";
 
 interface MantraEditModalProps {
   mantra: MantraEntry;
@@ -43,7 +48,7 @@ const mapMantraToFormState = (mantra: MantraEntry): MantraFormState => ({
   description: mantra.description ?? "",
   audioUrl: mantra.audioUrl ?? "",
   thumbnailUrl: mantra.thumbnailUrl ?? "",
-  duration: mantra.duration ? String(mantra.duration) : "",
+  duration: formatSecondsForDurationInput(mantra.duration),
   difficulty: mantra.difficulty ?? "",
   category: mantra.category ?? "",
   isPremium: Boolean(mantra.isPremium),
@@ -81,6 +86,10 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
   const [playlists, setPlaylists] = useState<PlaylistEntry[]>([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<string>>(new Set());
+  const parsedDuration = useMemo(
+    () => parseDurationInputToSeconds(form.duration),
+    [form.duration]
+  );
   const benefitOptions = useMemo(
     () => getBenefitOptionsForDeity(form.deity),
     [form.deity]
@@ -177,9 +186,9 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
       toast.error("Please enter the audio URL.");
       return;
     }
-    const durationNum = parseInt(form.duration, 10);
-    if (Number.isNaN(durationNum) || durationNum <= 0) {
-      toast.error("Please enter a valid duration in seconds.");
+    const durationNum = parseDurationInputToSeconds(form.duration);
+    if (!durationNum) {
+      toast.error("Please enter a valid duration (mm:ss, hh:mm:ss, or seconds).");
       return;
     }
 
@@ -300,14 +309,22 @@ export const MantraEditModal: React.FC<MantraEditModalProps> = ({
           />
 
           <InputField
-            label="Duration (seconds)"
-            type="number"
+            label="Duration *"
+            type="text"
             value={form.duration}
             onChange={(value) => setField("duration", value)}
-            placeholder="e.g. 300"
-            min={1}
+            placeholder="e.g. 5:30 or 330"
             required
-            helperText="Duration of the mantra in seconds (e.g. 300 = 5 min)"
+            helperText={
+              form.duration.trim().length === 0
+                ? "Enter mm:ss, hh:mm:ss, or total seconds."
+                : parsedDuration
+                  ? `Will save as ${parsedDuration}s (${formatDurationLabel(parsedDuration)}).`
+                  : "Invalid format. Examples: 5:30, 1:05:20, or 330."
+            }
+            helperTone={
+              form.duration.trim().length > 0 && !parsedDuration ? "error" : "default"
+            }
           />
 
           <SelectField
@@ -455,6 +472,7 @@ function InputField({
   type = "text",
   required,
   helperText,
+  helperTone = "default",
   min,
 }: {
   label: string;
@@ -464,6 +482,7 @@ function InputField({
   type?: string;
   required?: boolean;
   helperText?: string;
+  helperTone?: "default" | "error";
   min?: number;
 }) {
   return (
@@ -479,7 +498,13 @@ function InputField({
         onChange={(e) => onChange(e.target.value)}
       />
       {helperText ? (
-        <p className="text-[10px] text-slate-400 mt-1">{helperText}</p>
+        <p
+          className={`text-[10px] mt-1 ${
+            helperTone === "error" ? "text-rose-500" : "text-slate-400"
+          }`}
+        >
+          {helperText}
+        </p>
       ) : null}
     </div>
   );

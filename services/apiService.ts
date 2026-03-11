@@ -206,7 +206,7 @@ export const apiService = {
     if (options?.force) query.set('force', 'true');
     if (options?.manual) query.set('manual', 'true');
     const qs = query.toString();
-    const url = `${getNotificationsApiUrl()}/breath/notifications/cron/breathing-sessions${qs ? `?${qs}` : ''}`;
+    const url = `${getNotificationsApiUrl()}/breath/notifications/cron/morning-ritual${qs ? `?${qs}` : ''}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -217,7 +217,7 @@ export const apiService = {
     });
 
     if (!response.ok) {
-      throw await parseApiError(response, 'Failed to run breathing sessions cron');
+      throw await parseApiError(response, 'Failed to run morning ritual reminders cron');
     }
 
     const data = await response.json();

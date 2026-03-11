@@ -75,15 +75,15 @@ export const INITIAL_CONTENT: ContentItem[] = [
 
 export const NOTIFICATION_HISTORY: NotificationRecord[] = [
   { id: 'n1', title: 'New Releases', type: 'Push', recipients: 2847, sentDate: 'Feb 15, 2026', openRate: '92%', status: 'Delivered' },
-  { id: 'n2', title: 'Breathing Sessions', type: 'Push', recipients: 3194, sentDate: 'Feb 15, 2026', openRate: '78%', status: 'Delivered' },
+  { id: 'n2', title: 'Morning Ritual', type: 'Push', recipients: 3194, sentDate: 'Feb 15, 2026', openRate: '78%', status: 'Delivered' },
   { id: 'n3', title: 'Course Reminders', type: 'Push', recipients: 1523, sentDate: 'Feb 14, 2026', openRate: '85%', status: 'Delivered' },
 ];
 
 export const BREATHING_SESSIONS_DEFAULT = {
-  id: 'breathing-sessions',
+  id: 'morning-ritual-reminders',
   time: '08:00',
-  title: 'Breathing Session Reminder',
-  body: 'Take a few mindful breaths with {{patternName}}.',
+  title: 'Morning Ritual Reminder',
+  body: 'Start your morning ritual. {{ritualPrompt}}',
   runningInBackground: true,
 };
 

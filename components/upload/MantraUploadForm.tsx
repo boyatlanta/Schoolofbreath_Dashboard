@@ -10,6 +10,8 @@ import {
 import { suggestMantraContent } from "../../services/insightsService";
 import { playlistsService } from "../../services/content/playlistsService";
 import type { PlaylistEntry } from "../../services/content/playlistsService";
+import { formatDurationLabel } from "../../utils/audioDuration";
+import { parseDurationInputToSeconds } from "../../utils/mantraDuration";
 import { toast } from "react-toastify";
 
 interface MantraUploadFormProps {
@@ -40,6 +42,10 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<string>>(new Set());
   const benefitOptions = useMemo(() => getBenefitOptionsForDeity(deity), [deity]);
+  const parsedDuration = useMemo(
+    () => parseDurationInputToSeconds(duration),
+    [duration]
+  );
 
   useEffect(() => {
     if (!benefitOptions.includes(benefit)) {
@@ -113,9 +119,9 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
       toast.error("Please enter the audio URL.");
       return;
     }
-    const durationNum = parseInt(duration, 10);
-    if (isNaN(durationNum) || durationNum <= 0) {
-      toast.error("Please enter a valid duration in seconds.");
+    const durationNum = parseDurationInputToSeconds(duration);
+    if (!durationNum) {
+      toast.error("Please enter a valid duration (mm:ss, hh:mm:ss, or seconds).");
       return;
     }
     setIsUploading(true);
@@ -195,17 +201,28 @@ export const MantraUploadForm: React.FC<MantraUploadFormProps> = ({
       <InputField label="Audio URL" type="url" value={audioUrl} onChange={setAudioUrl} placeholder="https://..." required />
       <InputField label="Thumbnail URL (optional)" type="url" value={thumbnailUrl} onChange={setThumbnailUrl} placeholder="https://..." />
       <div>
-        <label className={`block mb-2 ${labelClass}`}>Duration (seconds)</label>
+        <label className={`block mb-2 ${labelClass}`}>Duration *</label>
         <input
-          type="number"
-          min={1}
+          type="text"
           required
           className={inputClass}
-          placeholder="e.g. 300"
+          placeholder="e.g. 5:30 or 330"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         />
-        <p className="text-[10px] text-slate-400 mt-1">Duration of the mantra in seconds (e.g. 300 = 5 min)</p>
+        <p
+          className={`text-[10px] mt-1 ${
+            duration.trim().length > 0 && !parsedDuration
+              ? "text-rose-500"
+              : "text-slate-400"
+          }`}
+        >
+          {duration.trim().length === 0
+            ? "Enter mm:ss, hh:mm:ss, or total seconds."
+            : parsedDuration
+              ? `Will save as ${parsedDuration}s (${formatDurationLabel(parsedDuration)}).`
+              : "Invalid format. Examples: 5:30, 1:05:20, or 330."}
+        </p>
       </div>
       <div>
         <label className={`block mb-2 ${labelClass}`}>Deity</label>

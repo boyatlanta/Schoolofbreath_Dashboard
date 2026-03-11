@@ -181,18 +181,18 @@ export const Notifications: React.FC = () => {
         breathingIntervalDays: intervalDays,
       });
 
-      alert('Breathing sessions saved.');
+      alert('Morning ritual reminders saved.');
     } catch (error) {
-      alert(`Failed to save breathing sessions: ${extractErrorMessage(error)}`);
+      alert(`Failed to save morning ritual reminders: ${extractErrorMessage(error)}`);
     }
   };
 
   const handleRunBreathing = async () => {
     try {
       await apiService.runBreathingSessionsCron({ force: true, manual: true });
-      alert('Breathing sessions cron executed.');
+      alert('Morning ritual reminders cron executed.');
     } catch (error) {
-      alert(`Failed to run breathing sessions: ${extractErrorMessage(error)}`);
+      alert(`Failed to run morning ritual reminders: ${extractErrorMessage(error)}`);
     }
   };
 
@@ -293,10 +293,10 @@ export const Notifications: React.FC = () => {
         <p className="text-slate-500 font-medium mt-1">Configure engagement channels and review communication history.</p>
       </header>
 
-      {/* Breathing sessions */}
+      {/* Morning ritual reminders */}
       <NotificationCard
-        title="Breathing sessions"
-        subtitle="Standalone breathwork prompts based on each user's local timezone."
+        title="Morning ritual reminders"
+        subtitle="Dynamic prompts to begin the user's morning ritual in local timezone."
         timeBadge={breathing.time}
         actions={
           <>
@@ -304,7 +304,7 @@ export const Notifications: React.FC = () => {
               onClick={handleSaveBreathing}
               className="px-6 py-2.5 bg-deep-teal text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
             >
-              Save breathing
+              Save morning ritual
             </button>
             <button
               onClick={handleRunBreathing}
@@ -392,7 +392,7 @@ export const Notifications: React.FC = () => {
       {/* Course reminders */}
       <NotificationCard
         title="Course reminders"
-        subtitle="Checks progress on your cron cadence (recommended every 20 minutes)."
+        subtitle="Suggests the next course step based on user progress."
         timeBadge={undefined}
         actions={
           <>
@@ -511,7 +511,7 @@ export const Notifications: React.FC = () => {
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-light/20 focus:border-teal-primary outline-none"
             />
             <p className="text-xs text-slate-500 mt-1.5">
-              Use app routes like `/meditate?tab=guided`, `/sleep-music`, `/course/{'{courseId}'}`, `/breathe?pattern={'{patternId}'}`.
+              Use app routes like `/morning-ritual`, `/meditate?tab=guided`, `/sleep-music`, `/course/{'{courseId}'}`.
             </p>
           </div>
         </div>
