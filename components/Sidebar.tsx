@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { EnvironmentSwitch } from './EnvironmentSwitch';
 
 const NavItem: React.FC<{ to: string; icon: string; label: string; active: boolean }> = ({ to, icon, label, active }) => (
   <Link
@@ -54,10 +53,6 @@ export const Sidebar: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             <p className="text-xs text-white/80 font-medium truncate">{userEmail}</p>
           </div>
         </div>
-        <div className="px-6 mb-8 mx-4">
-          <EnvironmentSwitch />
-        </div>
-
         <nav className="px-4 custom-scrollbar overflow-y-auto h-[calc(100vh-320px)]">
           <div className="mb-6">
             <p className="px-4 mb-3 text-[10px] tracking-widest uppercase opacity-40 font-bold">Overview</p>
