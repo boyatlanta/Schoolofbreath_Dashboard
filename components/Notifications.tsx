@@ -241,6 +241,10 @@ export const Notifications: React.FC = () => {
   };
 
   const handleSendRelease = async () => {
+    if (sendingRelease) {
+      return;
+    }
+
     setReleaseMessage(null);
     setReleaseError(null);
 
