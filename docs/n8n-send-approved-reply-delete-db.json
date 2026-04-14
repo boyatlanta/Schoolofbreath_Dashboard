@@ -1,0 +1,163 @@
+{
+  "name": "Send Approved Reply -> Delete From Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "14d0be78-8198-4117-a0c5-4e75f2de9d57",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a8b0ed4a-bb0d-43a2-8297-0a039a6aa2bb",
+      "name": "Webhook",
+      "webhookId": "14d0be78-8198-4117-a0c5-4e75f2de9d57"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f2f123eb-db8e-4cad-88be-c95257f78e76",
+              "name": "email_id",
+              "value": "={{ $json.body?.email_id || $json.email_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "68658b95-6905-4b95-9a94-ac7c9988f7de",
+              "name": "to_email",
+              "value": "={{ (() => { const raw = String($json.body?.from_email || $json.from_email || '').toLowerCase().trim(); const angleMatch = raw.match(/<([^>]+)>/); const candidate = angleMatch ? angleMatch[1] : raw; const plainMatch = candidate.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/i); return (plainMatch ? plainMatch[0] : candidate).trim(); })() }}",
+              "type": "string"
+            },
+            {
+              "id": "616d91c9-30d3-4af2-babf-7b04f44f00d0",
+              "name": "reply_subject",
+              "value": "={{ $json.body?.subject || $json.subject || 'Your question' }}",
+              "type": "string"
+            },
+            {
+              "id": "860dcf9a-bf8f-45ff-adb8-28cc4f025f77",
+              "name": "reply_text",
+              "value": "={{ $json.body?.ai_reply || $json.ai_reply || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "5240df6f-3fb4-4aa3-b573-fdc78f6ec08f",
+              "name": "original_message_id",
+              "value": "={{ $json.body?.email_id || $json.email_id || $json.body?.originalMessageId || $json.originalMessageId || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "923b16af-b35d-4e77-a362-b3873f4d8f95",
+      "name": "Prepare Send Payload1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://breathing-ejercices-api.vercel.app/email/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"originalMessageId\": $('Prepare Send Payload1').item.json.original_message_id, \"to\": $('Prepare Send Payload1').item.json.to_email, \"subject\": $('Prepare Send Payload1').item.json.reply_subject, \"text\": $('Prepare Send Payload1').item.json.reply_text } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        464,
+        0
+      ],
+      "id": "b596b043-99ac-475c-96c9-92ab798b3ff1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "emails",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Prepare Send Payload1').item.json.email_id }}"
+            }
+          ]
+        }
+      },
+      "id": "9a0609b8-f26a-43df-a0ca-78248965567b",
+      "name": "Delete Sent Email in Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        704,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VwSTXF8yGAwhsjoI",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Send Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Send Payload1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Delete Sent Email in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "211154aecf698ff528a78ed88ab35f9446306660cd70b206b4be79bb67cc1f9f"
+  }
+}

@@ -1,0 +1,1543 @@
+{
+  "name": "Telegram HITL AI Review Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-ai-review-request",
+        "options": {}
+      },
+      "id": "3f99c5c9-0f9a-4e22-b5fc-a8b35ef4f3cc",
+      "name": "Webhook Review Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2528,
+        640
+      ],
+      "webhookId": "telegram-ai-review-request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "review_id",
+              "value": "={{ $json.body?.review_id || `rev_${$now.toMillis()}_${Math.random().toString(36).slice(2, 8)}` }}",
+              "type": "string"
+            },
+            {
+              "name": "email_id",
+              "value": "={{ $json.body?.email_id || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "from_email",
+              "value": "={{ $json.body?.from_email || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.body?.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "original_text",
+              "value": "={{ $json.body?.original_text || $json.body?.text || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "ai_reply",
+              "value": "={{ $json.body?.ai_reply || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "chat_message",
+              "value": "={{ $json.body?.chat_message || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "chat_id",
+              "value": "={{ $json.body?.chat_id || $env.TELEGRAM_REVIEW_CHAT_ID || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "callback_url",
+              "value": "={{ $json.body?.callback_url || 'https://n8n-production-bbef9.up.railway.app/webhook/14d0be78-8198-4117-a0c5-4e75f2de9d57' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8fb5fa6c-3952-4567-bdd4-76cc607cc7f8",
+      "name": "Normalize Review Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2288,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Normalize Review Request').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "8da95ab8-d477-4543-ae5e-19586097f791",
+      "name": "Delete Existing Review Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2048,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "telegram_ai_reviews",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "review_id",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.review_id }}"
+            },
+            {
+              "fieldId": "email_id",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.email_id }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.from_email }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.subject }}"
+            },
+            {
+              "fieldId": "original_text",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.original_text }}"
+            },
+            {
+              "fieldId": "ai_reply",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.ai_reply }}"
+            },
+            {
+              "fieldId": "chat_message",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.chat_message }}"
+            },
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.chat_id }}"
+            },
+            {
+              "fieldId": "callback_url",
+              "fieldValue": "={{ $('Normalize Review Request').item.json.callback_url }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "98f0fe8d-93df-4305-a4ea-f4d26446fd73",
+      "name": "Save Review Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1808,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Normalize Review Request').item.json.chat_id }}",
+        "text": "={{ `🧠 Human Review Needed\\n\\nEmail from: ${$('Normalize Review Request').item.json.from_email || '-'}\\nSubject: ${$('Normalize Review Request').item.json.subject || '-'}\\nReview ID: ${$('Normalize Review Request').item.json.review_id}\\n\\nOriginal email (preview):\\n${String($('Normalize Review Request').item.json.original_text || '').slice(0, 1200)}\\n\\nAI draft reply:\\n${$('Normalize Review Request').item.json.ai_reply || '(empty)'}\\n\\nChoose an action:` }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": [
+                {
+                  "buttons": [
+                    {
+                      "text": "✅ Approve",
+                      "additionalFields": {
+                        "callback_data": "={{ `approve:${$('Normalize Review Request').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "❌ Reject",
+                      "additionalFields": {
+                        "callback_data": "={{ `reject:${$('Normalize Review Request').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "✏️ Edit",
+                      "additionalFields": {
+                        "callback_data": "={{ `edit:${$('Normalize Review Request').item.json.review_id}` }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "90a19a9f-2f9e-48f4-8d27-f7f4eb6f17c8",
+      "name": "Telegram Send Review Card",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1568,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "accepted",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "name": "review_id",
+              "value": "={{ $('Normalize Review Request').item.json.review_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c5da7f89-0f62-48d1-b6a4-050d15d2a277",
+      "name": "Acknowledge Intake",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1328,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query",
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "={{ $env.TELEGRAM_REVIEW_CHAT_ID || '' }}"
+        }
+      },
+      "id": "f4cb6f01-a8cd-4e89-a8a7-28fcfa660f16",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2528,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.callback_query?.data || '' }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9397b4e2-b364-4ec2-89ea-4a36901308bf",
+      "name": "Is Callback Query?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2288,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "callback_action",
+              "value": "={{ ($json.callback_query?.data || '').split(':')[0] || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "review_id",
+              "value": "={{ ($json.callback_query?.data || '').split(':')[1] || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "query_id",
+              "value": "={{ $json.callback_query?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "chat_id",
+              "value": "={{ $json.callback_query?.message?.chat?.id || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8ec83bb5-8d97-44ff-a67d-1db6260c676a",
+      "name": "Parse Callback",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2064,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "operation": "answerQuery",
+        "queryId": "={{ $('Parse Callback').item.json.query_id }}",
+        "additionalFields": {
+          "text": "Action received"
+        }
+      },
+      "id": "58f9024a-4f38-4534-ad77-c03fd87c976d",
+      "name": "Answer Callback Query",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1824,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Parse Callback').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "f4ec88d1-3791-45dc-b369-fa58d1fcb95b",
+      "name": "Get Review Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1584,
+        1024
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Callback').item.json.callback_action }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d5ec764f-8ed0-4fe5-a89d-d2bbf247ec29",
+      "name": "Is Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1360,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "decision",
+              "value": "approved",
+              "type": "string"
+            },
+            {
+              "name": "review_id",
+              "value": "={{ $('Get Review Session').item.json.review_id || $('Parse Callback').item.json.review_id }}",
+              "type": "string"
+            },
+            {
+              "name": "email_id",
+              "value": "={{ $('Get Review Session').item.json.email_id || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "from_email",
+              "value": "={{ $('Get Review Session').item.json.from_email || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $('Get Review Session').item.json.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "ai_reply",
+              "value": "={{ $('Get Review Session').item.json.ai_reply || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "callback_url",
+              "value": "={{ $('Get Review Session').item.json.callback_url || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b17d7430-5695-4f5d-a8a8-57fce892e62d",
+      "name": "Build Approved Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1136,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Approved Payload').item.json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { decision: $('Build Approved Payload').item.json.decision, review_id: $('Build Approved Payload').item.json.review_id, email_id: $('Build Approved Payload').item.json.email_id, from_email: $('Build Approved Payload').item.json.from_email, subject: $('Build Approved Payload').item.json.subject, ai_reply: $('Build Approved Payload').item.json.ai_reply, source: 'telegram_hitl' } }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "2f34dfe9-1bd0-40f4-a377-6f12915d1887",
+      "name": "Send Decision Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -896,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Build Approved Payload').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "0a2bb8f7-2c90-4a8f-bd01-0e18d45a2f53",
+      "name": "Delete Approved Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parse Callback').item.json.chat_id }}",
+        "text": "✅ Approved. Continuing automation now."
+      },
+      "id": "6f7d5506-f2ca-45e1-8a54-9d5fcbf0dc8f",
+      "name": "Telegram Notify Approved",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -416,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Callback').item.json.callback_action }}",
+              "rightValue": "edit",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7283cedf-3b70-445f-91b3-7de80d15a1c8",
+      "name": "Is Edit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1136,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parse Callback').item.json.chat_id }}",
+        "text": "={{ `✏️ Send your edited reply using:\n/edit ${$('Parse Callback').item.json.review_id} <your new reply>` }}"
+      },
+      "id": "e5905397-16e9-4907-a8da-d82dc87f1ff2",
+      "name": "Telegram Ask For Edit Text",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -896,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Callback').item.json.callback_action }}",
+              "rightValue": "reject",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d0a6cea-6777-4413-a9a8-0331ce2f8e68",
+      "name": "Is Reject?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -896,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parse Callback').item.json.chat_id }}",
+        "text": "Choose reject action:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": [
+                {
+                  "buttons": [
+                    {
+                      "text": "♻️ Regenerate",
+                      "additionalFields": {
+                        "callback_data": "={{ `regenerate:${$('Parse Callback').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "🛑 Cancel",
+                      "additionalFields": {
+                        "callback_data": "={{ `cancel:${$('Parse Callback').item.json.review_id}` }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "70639f9d-b5ec-4dd8-a65b-996098f7ad49",
+      "name": "Telegram Ask Reject Option",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Callback').item.json.callback_action }}",
+              "rightValue": "regenerate",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "55f4f8cd-c075-4df8-8eb9-034211d7bb2f",
+      "name": "Is Regenerate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -656,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://breathing-ejercices-api.vercel.app/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { message: $('Get Review Session').item.json.chat_message || $('Get Review Session').item.json.original_text || '' } }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "f3137b41-a85a-4b15-95ce-9f934f209877",
+      "name": "Regenerate Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -416,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Parse Callback').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "6b52c4ff-9753-4a9d-b02f-4f5de74cf6e8",
+      "name": "Delete Session Before Regenerated Save",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "telegram_ai_reviews",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "review_id",
+              "fieldValue": "={{ $('Get Review Session').item.json.review_id || $('Parse Callback').item.json.review_id }}"
+            },
+            {
+              "fieldId": "email_id",
+              "fieldValue": "={{ $('Get Review Session').item.json.email_id || '' }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $('Get Review Session').item.json.from_email || '' }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $('Get Review Session').item.json.subject || '' }}"
+            },
+            {
+              "fieldId": "original_text",
+              "fieldValue": "={{ $('Get Review Session').item.json.original_text || '' }}"
+            },
+            {
+              "fieldId": "ai_reply",
+              "fieldValue": "={{ ($json.text || $('Get Review Session').item.json.ai_reply || '').toString().trim() }}"
+            },
+            {
+              "fieldId": "chat_message",
+              "fieldValue": "={{ $('Get Review Session').item.json.chat_message || '' }}"
+            },
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Get Review Session').item.json.chat_id || $('Parse Callback').item.json.chat_id || '' }}"
+            },
+            {
+              "fieldId": "callback_url",
+              "fieldValue": "={{ $('Get Review Session').item.json.callback_url || '' }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "be386c11-9098-499e-8f0b-8670f5e6cc2d",
+      "name": "Save Regenerated Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        64,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Get Review Session').item.json.chat_id || $('Parse Callback').item.json.chat_id }}",
+        "text": "={{ `♻️ Regenerated draft\\n\\nEmail from: ${$('Get Review Session').item.json.from_email || '-'}\\nSubject: ${$('Get Review Session').item.json.subject || '-'}\\nReview ID: ${$('Parse Callback').item.json.review_id}\\n\\nOriginal email (preview):\\n${String($('Get Review Session').item.json.original_text || '').slice(0, 1200)}\\n\\nAI draft reply:\\n${$('Save Regenerated Session').item.json.ai_reply || ''}\\n\\nChoose an action:` }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": [
+                {
+                  "buttons": [
+                    {
+                      "text": "✅ Approve",
+                      "additionalFields": {
+                        "callback_data": "={{ `approve:${$('Parse Callback').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "❌ Reject",
+                      "additionalFields": {
+                        "callback_data": "={{ `reject:${$('Parse Callback').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "✏️ Edit",
+                      "additionalFields": {
+                        "callback_data": "={{ `edit:${$('Parse Callback').item.json.review_id}` }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "f14c9e0e-cfc8-40fe-b0c0-ef0db9bcf5a5",
+      "name": "Telegram Send Regenerated Card",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Callback').item.json.callback_action }}",
+              "rightValue": "cancel",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "806f5ba0-9f58-4f62-a0f4-9101effde682",
+      "name": "Is Cancel?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -416,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "decision",
+              "value": "rejected",
+              "type": "string"
+            },
+            {
+              "name": "review_id",
+              "value": "={{ $('Get Review Session').item.json.review_id || $('Parse Callback').item.json.review_id }}",
+              "type": "string"
+            },
+            {
+              "name": "email_id",
+              "value": "={{ $('Get Review Session').item.json.email_id || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "callback_url",
+              "value": "={{ $('Get Review Session').item.json.callback_url || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb0b506a-9a5d-4cd2-bf30-15f7dc228f32",
+      "name": "Build Rejected Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -176,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Rejected Payload').item.json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { decision: $('Build Rejected Payload').item.json.decision, review_id: $('Build Rejected Payload').item.json.review_id, email_id: $('Build Rejected Payload').item.json.email_id, source: 'telegram_hitl' } }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "1ebe2fe4-a26a-4350-b2af-f97884a32b5c",
+      "name": "Send Rejected Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        64,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Build Rejected Payload').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "083d6bc5-212a-4e65-8897-7069f4ff4bf5",
+      "name": "Delete Rejected Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        304,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parse Callback').item.json.chat_id }}",
+        "text": "❌ Rejected. Workflow cancelled."
+      },
+      "id": "e2d2fa9d-3dfd-4129-bb53-875f0dc6fdd4",
+      "name": "Telegram Notify Rejected",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        544,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.message?.text || '').toLowerCase() }}",
+              "rightValue": "/edit ",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f23313ff-0b80-4285-a2c6-c2f4fa47d8eb",
+      "name": "Is Edit Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2064,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "review_id",
+              "value": "={{ (($json.message?.text || '').split(' ')[1] || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "name": "edited_reply",
+              "value": "={{ (() => { const raw = String($json.message?.text || ''); const parts = raw.split(' '); if (parts.length < 3) return ''; return parts.slice(2).join(' ').trim(); })() }}",
+              "type": "string"
+            },
+            {
+              "name": "chat_id",
+              "value": "={{ $json.message?.chat?.id || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "677f48fd-7f02-45b8-8f10-fb8bc0fa0269",
+      "name": "Parse Edit Command",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1824,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Parse Edit Command').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "47eeb004-f577-44a5-bfa8-858ac977de8a",
+      "name": "Get Session For Edit Command",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1584,
+        1360
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "telegram_ai_reviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_id",
+              "keyValue": "={{ $('Parse Edit Command').item.json.review_id }}"
+            }
+          ]
+        }
+      },
+      "id": "50cf8010-0a00-4ecb-8d6d-289ef1ac656f",
+      "name": "Delete Session Before Edit Save",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "telegram_ai_reviews",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "review_id",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.review_id || $('Parse Edit Command').item.json.review_id }}"
+            },
+            {
+              "fieldId": "email_id",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.email_id || '' }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.from_email || '' }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.subject || '' }}"
+            },
+            {
+              "fieldId": "original_text",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.original_text || '' }}"
+            },
+            {
+              "fieldId": "ai_reply",
+              "fieldValue": "={{ $('Parse Edit Command').item.json.edited_reply }}"
+            },
+            {
+              "fieldId": "chat_message",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.chat_message || '' }}"
+            },
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.chat_id || $('Parse Edit Command').item.json.chat_id }}"
+            },
+            {
+              "fieldId": "callback_url",
+              "fieldValue": "={{ $('Get Session For Edit Command').item.json.callback_url || '' }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "edited"
+            }
+          ]
+        }
+      },
+      "id": "76937d18-e4f2-4ca6-ae14-d16bdd6dc0f2",
+      "name": "Save Edited Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parse Edit Command').item.json.chat_id }}",
+        "text": "={{ `✏️ Edited draft saved\\n\\nEmail from: ${$('Get Session For Edit Command').item.json.from_email || '-'}\\nSubject: ${$('Get Session For Edit Command').item.json.subject || '-'}\\nReview ID: ${$('Parse Edit Command').item.json.review_id}\\n\\nOriginal email (preview):\\n${String($('Get Session For Edit Command').item.json.original_text || '').slice(0, 1200)}\\n\\nAI draft reply:\\n${$('Parse Edit Command').item.json.edited_reply}\\n\\nChoose an action:` }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": [
+                {
+                  "buttons": [
+                    {
+                      "text": "✅ Approve",
+                      "additionalFields": {
+                        "callback_data": "={{ `approve:${$('Parse Edit Command').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "❌ Reject",
+                      "additionalFields": {
+                        "callback_data": "={{ `reject:${$('Parse Edit Command').item.json.review_id}` }}"
+                      }
+                    },
+                    {
+                      "text": "✏️ Edit Again",
+                      "additionalFields": {
+                        "callback_data": "={{ `edit:${$('Parse Edit Command').item.json.review_id}` }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "ec43af23-4ba5-4aa9-b8bb-15058e43995f",
+      "name": "Telegram Send Edited Card",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -864,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message?.chat?.id || '' }}",
+        "text": "Use /edit <review_id> <new reply text> to edit a pending draft."
+      },
+      "id": "dd8d0bbd-8f90-45c8-a35d-d5d39e15c190",
+      "name": "Telegram Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1824,
+        1520
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Review Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize Review Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Review Request": {
+      "main": [
+        [
+          {
+            "node": "Delete Existing Review Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Existing Review Session": {
+      "main": [
+        [
+          {
+            "node": "Save Review Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Review Session": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Review Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Send Review Card": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is Callback Query?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Callback Query?": {
+      "main": [
+        [
+          {
+            "node": "Parse Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Edit Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Callback": {
+      "main": [
+        [
+          {
+            "node": "Answer Callback Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Callback Query": {
+      "main": [
+        [
+          {
+            "node": "Get Review Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Review Session": {
+      "main": [
+        [
+          {
+            "node": "Is Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Approve?": {
+      "main": [
+        [
+          {
+            "node": "Build Approved Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Edit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Approved Payload": {
+      "main": [
+        [
+          {
+            "node": "Send Decision Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Decision Callback": {
+      "main": [
+        [
+          {
+            "node": "Delete Approved Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Approved Session": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Edit?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Ask For Edit Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Reject?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Reject?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Ask Reject Option",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Regenerate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Regenerate?": {
+      "main": [
+        [
+          {
+            "node": "Regenerate Draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Cancel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Regenerate Draft": {
+      "main": [
+        [
+          {
+            "node": "Delete Session Before Regenerated Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Session Before Regenerated Save": {
+      "main": [
+        [
+          {
+            "node": "Save Regenerated Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Regenerated Session": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Regenerated Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Cancel?": {
+      "main": [
+        [
+          {
+            "node": "Build Rejected Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Rejected Payload": {
+      "main": [
+        [
+          {
+            "node": "Send Rejected Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejected Callback": {
+      "main": [
+        [
+          {
+            "node": "Delete Rejected Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Rejected Session": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Edit Command?": {
+      "main": [
+        [
+          {
+            "node": "Parse Edit Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Edit Command": {
+      "main": [
+        [
+          {
+            "node": "Get Session For Edit Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Session For Edit Command": {
+      "main": [
+        [
+          {
+            "node": "Delete Session Before Edit Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Session Before Edit Save": {
+      "main": [
+        [
+          {
+            "node": "Save Edited Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Edited Session": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Edited Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "211154aecf698ff528a78ed88ab35f9446306660cd70b206b4be79bb67cc1f9f"
+  }
+}

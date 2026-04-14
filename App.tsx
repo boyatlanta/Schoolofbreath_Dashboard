@@ -8,6 +8,8 @@ import { ContentManager } from './components/ContentManager';
 import { CoursesPage } from './components/courses/CoursesPage';
 import { PlaylistsPage } from './components/mantras/PlaylistsPage';
 import { Notifications } from './components/Notifications';
+import { MembershipAuditReport } from './components/MembershipAuditReport';
+import { GmailAIDashboardPage } from './components/GmailAIDashboardPage';
 import { UploadModal } from './components/UploadModal';
 import { Login } from './components/Login';
 import { Category } from './types';
@@ -58,7 +60,7 @@ const MainLayout: React.FC = () => {
     <div className="flex min-h-screen">
       <Sidebar onLogout={handleLogout} />
       
-      <main className="flex-1 ml-0 lg:ml-72 p-6 transition-all duration-300">
+      <main className="ml-0 flex-1 px-3 pb-6 pt-20 transition-all duration-300 sm:px-4 lg:ml-72 lg:p-6">
         <Routes>
           <Route path="/" element={<Dashboard onOpenUpload={handleOpenUpload} />} />
           <Route path="/sleep-music" element={<ContentManager category={Category.SLEEP_MUSIC} refreshKey={contentRefreshKey} onOpenUpload={() => handleOpenUpload(Category.SLEEP_MUSIC)} />} />
@@ -68,6 +70,8 @@ const MainLayout: React.FC = () => {
           <Route path="/playlists" element={<PlaylistsPage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/membership-audit" element={<MembershipAuditReport />} />
+          <Route path="/gmail-ai" element={<GmailAIDashboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

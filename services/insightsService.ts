@@ -14,7 +14,7 @@ interface MantraSuggestion {
   description: string;
 }
 
-const DEFAULT_GOOGLE_MODEL = "gemini-2.0-flash";
+const DEFAULT_GOOGLE_MODEL = "gemini-2.5-flash";
 
 const compact = (value: string): string => value.replace(/\s+/g, " ").trim();
 

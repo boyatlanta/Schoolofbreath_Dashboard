@@ -1,0 +1,553 @@
+{
+  "name": "Gmail AI Inbound -> Chat API Only -> Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]",
+          "forceReconnect": 60,
+          "trackLastMessageId": true
+        }
+      },
+      "id": "f7c9ee7f-ee21-4287-804b-82d04dc0cf8d",
+      "name": "New GoDaddy Email1",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        -1248,
+        640
+      ],
+      "credentials": {
+        "imap": {
+          "id": "nlt9so4CRQgABdRm",
+          "name": "IMAP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "c2e2f08d-ec4c-43de-8dd6-35244af8e340",
+      "name": "Loop Over Unread1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1120,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ ($json.output?.text || 'yes').toLowerCase().trim() }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2c2e257-2344-41e5-9965-e1391221ac38",
+      "name": "Needs Reply?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1008,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d9582af-f8c9-4d4d-a2ef-f2d7ec7ba51b",
+              "name": "chat_message",
+              "value": "=Write a professional, warm, and helpful email reply for The School of Breath.\\n\\nOriginal email details:\\nFrom: {{ $('New GoDaddy Email1').item.json.from || '' }}\\nSubject: {{ $('New GoDaddy Email1').item.json.subject || '' }}\\nBody:\\n{{ $('New GoDaddy Email1').item.json.textPlain || $('New GoDaddy Email1').item.json.text || $('New GoDaddy Email1').item.json.html || '' }}\\n\\nReturn only the reply body, no subject line.",
+              "type": "string"
+            },
+            {
+              "id": "f5f8516c-a487-4ee7-aa77-392bab91f8e2",
+              "name": "normalized_email",
+              "value": "={{ (() => { const raw = String($('New GoDaddy Email1').item.json.from || '').toLowerCase().trim(); const angleMatch = raw.match(/<([^>]+)>/); const candidate = angleMatch ? angleMatch[1] : raw; const plainMatch = candidate.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/i); return (plainMatch ? plainMatch[0] : candidate).trim(); })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6fdc5bc2-8f2f-4e1f-b0ef-22b72e9c50d7",
+      "name": "Build Chat Message1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "emails",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ (() => { const email = $('New GoDaddy Email1').item.json || {}; return String(email.messageId || email.metadata?.['message-id'] || email.attributes?.uid || ''); })() }}"
+            }
+          ]
+        }
+      },
+      "id": "cb3d9d7f-9c66-4313-973a-89db204fa7a6",
+      "name": "Check Existing in Supabase1",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        640
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "VwSTXF8yGAwhsjoI",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "c77f2f95-9374-42bb-bf36-a318de9d9ebf",
+              "leftValue": "={{ ($json.status || '').toLowerCase().trim() }}",
+              "rightValue": "sent",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "95e90313-6e0f-48d5-b64d-2714d7314a0f",
+      "name": "Is Not Sent?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -544,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://breathing-ejercices-api.vercel.app/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"message\": $('Build Chat Message1').item.json.chat_message } }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "75c1ab8e-2f3f-4d7b-b376-95a8be2a8db2",
+      "name": "Store Chat API1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -528,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ca305dc-2094-4fd9-a3d3-1721151236e2",
+              "name": "final_reply",
+              "value": "={{ (($json.text || '') + '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "6f09d2bc-9b8f-4faa-9704-d1dffdc2f93f",
+              "name": "chat_session_id",
+              "value": "={{ $json.sessionId || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bc0c55f8-c536-4383-b5e2-cc2f63d6075f",
+              "name": "chat_selected_guide",
+              "value": "={{ $json.selectedGuide || 'abhi' }}",
+              "type": "string"
+            },
+            {
+              "id": "743d37ad-a95d-4a22-b86e-c8e259fe35cc",
+              "name": "chat_error",
+              "value": "={{ $json.error || $json.message || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d8466a3b-4b2f-435a-b851-47b5d6195f04",
+              "name": "chat_status",
+              "value": "={{ $json.statusCode || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2bceab9-d20e-4405-9c38-fa16f3f5e5e0",
+      "name": "Normalize Chat Reply1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f83d8b81-368b-4fd8-a8f3-4a78bfd0f490",
+              "name": "final_reply",
+              "value": "={{ ($json.message?.content?.email_reply || $json.message?.content || $('Normalize Chat Reply1').item.json.final_reply || '').toString().trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a6d31ec9-2c84-43f2-bf3e-317f33f73f07",
+      "name": "Finalize Adapted Reply1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -48,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "f93e1b0a-4328-4af2-aec8-3ba8b77a6c18",
+              "leftValue": "={{ ($json.final_reply || '').trim() }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f8e9fa10-8df9-4dc0-b047-c7f5122734ad",
+      "name": "Reply Exists?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        192,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "emails",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ (() => { const email = $('New GoDaddy Email1').item.json || {}; return String(email.messageId || email.metadata?.['message-id'] || email.attributes?.uid || `${$now.toMillis()}-${Math.random().toString(36).slice(2, 10)}`); })() }}"
+            },
+            {
+              "fieldId": "from_email",
+              "fieldValue": "={{ $('Build Chat Message1').item.json.normalized_email || $('New GoDaddy Email1').item.json.from }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $('New GoDaddy Email1').item.json.subject }}"
+            },
+            {
+              "fieldId": "text",
+              "fieldValue": "={{ $('New GoDaddy Email1').item.json.textPlain || $('New GoDaddy Email1').item.json.text || '' }}"
+            },
+            {
+              "fieldId": "ai_reply",
+              "fieldValue": "={{ $('Finalize Adapted Reply1').item.json.final_reply }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "4414edaf-061c-40ad-a6cb-3bd459771974",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        432,
+        592
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VwSTXF8yGAwhsjoI",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b3db741-1b0f-48f4-a4ac-8f84f9d9fc77",
+              "name": "error",
+              "value": "={{ $('Normalize Chat Reply1').item.json.chat_error || 'Chat API returned empty text' }}",
+              "type": "string"
+            },
+            {
+              "id": "dfc02268-8c8b-43eb-89f6-bab88a3ffc9d",
+              "name": "chat_status",
+              "value": "={{ $('Normalize Chat Reply1').item.json.chat_status || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "2cab9f89-a9dc-4ae8-9ff8-0ac08e8a2b04",
+              "name": "chat_session_id",
+              "value": "={{ $('Normalize Chat Reply1').item.json.chat_session_id || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "183e6433-e1b0-4873-b37e-a8674e4f3302",
+      "name": "Capture Chat Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "4a4b73f7-f295-4dbf-ab18-f5395c0fbcbb",
+      "name": "Wait Between Items1",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        640
+      ],
+      "webhookId": "91d145d8-445c-4de4-a7f0-a54cd4a54ad3"
+    }
+  ],
+  "connections": {
+    "New GoDaddy Email1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Unread1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Unread1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Needs Reply?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Reply?1": {
+      "main": [
+        [
+          {
+            "node": "Build Chat Message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Between Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Chat Message1": {
+      "main": [
+        [
+          {
+            "node": "Check Existing in Supabase1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing in Supabase1": {
+      "main": [
+        [
+          {
+            "node": "Is Not Sent?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Not Sent?1": {
+      "main": [
+        [
+          {
+            "node": "Store Chat API1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Between Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Chat API1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Chat Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Chat Reply1": {
+      "main": [
+        [
+          {
+            "node": "Finalize Adapted Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Adapted Reply1": {
+      "main": [
+        [
+          {
+            "node": "Reply Exists?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Exists?1": {
+      "main": [
+        [
+          {
+            "node": "Save to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Capture Chat Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Wait Between Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture Chat Failure": {
+      "main": [
+        [
+          {
+            "node": "Wait Between Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Between Items1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Unread1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "template": "gmail_chat_api_only",
+    "notes": "Flow sends email content to /chat, then uses AI node to polish tone while preserving facts, then stores adapted reply in Supabase."
+  }
+}
