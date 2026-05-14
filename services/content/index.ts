@@ -21,6 +21,8 @@ export type {
   GuidedMeditationUpdateInput,
 } from "./guidedMeditationsService";
 
+export { uploadGuidedMeditationPosterFromDataUrl } from "./guidedMeditationPosterUploadService";
+
 export {
   mantrasService,
   DEITY_OPTIONS,

@@ -4,6 +4,7 @@ import {
   guidedMeditationsService,
   GUIDED_MEDITATION_CATEGORY_ID,
 } from "../../services/content";
+import { GuidedMeditationIconStudio } from "./GuidedMeditationIconStudio";
 import {
   formatDurationLabel,
   getAudioDurationInSeconds,
@@ -50,6 +51,9 @@ const isValidHttpUrl = (value: string): boolean => {
     return false;
   }
 };
+
+const isValidGeneratedImageDataUrl = (value: string): boolean =>
+  /^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(value.trim());
 
 const mapEntryToForm = (
   entry: Awaited<ReturnType<typeof guidedMeditationsService.getById>>
@@ -149,7 +153,11 @@ export const GuidedMeditationEditModal: React.FC<
       toast.error("Please provide a valid audio URL.");
       return false;
     }
-    if (form.imageFilename.trim() && !isValidHttpUrl(form.imageFilename.trim())) {
+    if (
+      form.imageFilename.trim() &&
+      !isValidHttpUrl(form.imageFilename.trim()) &&
+      !isValidGeneratedImageDataUrl(form.imageFilename.trim())
+    ) {
       toast.error("Please provide a valid cover image URL.");
       return false;
     }
@@ -289,6 +297,15 @@ export const GuidedMeditationEditModal: React.FC<
               onChange={(value) => setField("imageFilename", value)}
               placeholder="https://storage.googleapis.com/.../Images/Abundance3.png"
               type="url"
+            />
+
+            <GuidedMeditationIconStudio
+              titleSeed={form.name || form.slug || "Inner Stillness"}
+              descriptionSeed={form.description}
+              uploadCoverToCloud
+              onApplyApprovedIcon={(imageDataUrlOrUrl) =>
+                setField("imageFilename", imageDataUrlOrUrl)
+              }
             />
 
             <InputField

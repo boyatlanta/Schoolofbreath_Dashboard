@@ -72,7 +72,7 @@ export const Sidebar: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           <div className="mb-6">
             <p className="px-4 mb-3 text-[10px] tracking-widest uppercase opacity-40 font-bold">System</p>
             <NavItem to="/notifications" icon="🔔" label="Notifications" active={location.pathname === '/notifications'} />
-            <NavItem to="/settings" icon="⚙️" label="Settings" active={location.pathname === '/settings'} />
+            <NavItem to="/gmail-ai" icon="✉️" label="Gmail AI" active={location.pathname === '/gmail-ai'} />
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/10">

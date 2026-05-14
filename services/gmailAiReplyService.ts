@@ -3,7 +3,7 @@ const MODEL_FALLBACKS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
 const compact = (value: string): string => value.replace(/\s+/g, ' ').trim();
 
-const getGoogleApiKey = () => "";
+const getGoogleApiKey = (): string => compact(import.meta.env.VITE_GOOGLE_AI_API_KEY || '');
 const getConfiguredModel = (): string => compact(import.meta.env.VITE_GOOGLE_AI_MODEL || DEFAULT_MODEL);
 
 export const isGmailGeminiConfigured = (): boolean => Boolean(getGoogleApiKey());

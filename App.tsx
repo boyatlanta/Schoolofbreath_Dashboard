@@ -8,6 +8,7 @@ import { ContentManager } from './components/ContentManager';
 import { CoursesPage } from './components/courses/CoursesPage';
 import { PlaylistsPage } from './components/mantras/PlaylistsPage';
 import { Notifications } from './components/Notifications';
+import { GmailAIDashboardPage } from './components/GmailAIDashboardPage';
 import { UploadModal } from './components/UploadModal';
 import { Login } from './components/Login';
 import { Category } from './types';
@@ -68,6 +69,7 @@ const MainLayout: React.FC = () => {
           <Route path="/playlists" element={<PlaylistsPage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/gmail-ai" element={<GmailAIDashboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -88,7 +90,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <MainLayout />
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} aria-label="Notifications" />
     </Router>
   );
 };
